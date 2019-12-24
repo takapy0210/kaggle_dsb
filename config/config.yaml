@@ -1,0 +1,5 @@
+SETTING:
+    INPUT_DIR_NAME: '../data/input/'
+    OUTPUT_DIR_NAME: '../data/output/'
+    MODEL_DIR_NAME: '../models/'
+    SCRIPT_DIR_NAME: '../scripts/'
