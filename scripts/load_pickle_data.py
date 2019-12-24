@@ -32,12 +32,12 @@ def read_test():
 
 def read_specs():
     logger.info('Reading specs.pkl')
-    return pd.read_pickle(os.path.join(file_path, INPUT_DIR_NAME + 'read_specs.pkl'))
+    return pd.read_pickle(os.path.join(file_path, INPUT_DIR_NAME + 'specs.pkl'))
 
 
 def read_train_labels():
     logger.info('Reading train_labels.pkl')
-    return pd.read_pickle(os.path.join(file_path, INPUT_DIR_NAME + 'read_train_labels.pkl'))
+    return pd.read_pickle(os.path.join(file_path, INPUT_DIR_NAME + 'train_labels.pkl'))
 
 
 if __name__ == '__main__':
