@@ -10,10 +10,11 @@ file_path = os.path.dirname(__file__)
 def read_data_all():
     train = read_train()
     test = read_test()
-    specs = read_specs()
+    # specs = read_specs()
     train_labels = read_train_labels()
     submission = read_submission()
-    return train, test, specs, train_labels, submission
+    logger.info('Reading data finished')
+    return train, test, train_labels, submission
 
 
 def read_train():
