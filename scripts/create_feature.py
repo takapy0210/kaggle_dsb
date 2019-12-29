@@ -12,13 +12,15 @@ def create_feature(df: pd.DataFrame) -> pd.DataFrame:
     title_features = _title_feature(df)
     datetime_features = _datetime_feature(df)
     game_time_features = _game_time_feature(df)
+    attempt_features = _attempt_features(df)
 
     features = pd.concat([
         type_features,
         event_code_features,
         title_features,
         datetime_features,
-        game_time_features
+        game_time_features,
+        attempt_features
     ], axis=1)
     logger.info('Create feature finished')
     logger.info(features.head())
@@ -70,3 +72,16 @@ def _game_time_feature(df: pd.DataFrame) -> pd.DataFrame:
     agg_features.rename(columns={col: 'game_time_'+col for col in agg_features.columns}, inplace=True)
     game_time_features = pd.concat([agg_features], axis=1)
     return game_time_features
+
+
+def _attempt_features(df: pd.DataFrame) -> pd.DataFrame:
+    logger.info('Creaet attempt features')
+    all_attempts = df.loc[
+        (df.type == "Assessment") & (df.title == 'Bird Measurer (Assessment)') & (df.event_code == 4110) |
+        (df.type == "Assessment") & (df.title != 'Bird Measurer (Assessment)') & (df.event_code == 4100)
+    ]
+    all_attempts['pass_assessment'] = all_attempts['event_data'].str.contains('true')
+    count_features = all_attempts.groupby(['game_session', 'pass_assessment'])['event_id'].count().unstack().fillna(0)
+    count_features.rename(columns={col: 'assignment_'+str(col)+'_counts' for col in count_features.columns}, inplace=True)
+    attempt_features = pd.concat([count_features]).fillna(0)
+    return attempt_features
