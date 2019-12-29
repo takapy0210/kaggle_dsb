@@ -1,5 +1,9 @@
 # kaggle_dsb
 
+## Pipeline
+
+![pipeline](https://github.com/shyaginuma/kaggle_dsb/blob/master/IGQL-DSB%20Pipeline.svg)
+
 ## ローカルでの実行
 
 PJのrootディレクトリにいると仮定すると、
