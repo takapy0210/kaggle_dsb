@@ -15,9 +15,10 @@ def staging_train(train_labels: pd.DataFrame, features: pd.DataFrame) -> (pd.Dat
     return X_train, y_train
 
 
-def staging_test(test: pd.DataFrame, features: pd.DataFrame) -> pd.DataFrame:
+def staging_test(test: pd.DataFrame, features: pd.DataFrame, submission: pd.DataFrame) -> pd.DataFrame:
     target_session = test.loc[test.groupby('installation_id')['timestamp'].idxmax(), ['installation_id', 'game_session']]
     target_session = target_session.set_index('game_session').merge(features, how='left', left_index=True, right_index=True)
+    target_session = submission.merge(target_session, how='left', on='installation_id')  # submissionファイルの順番と揃える
     target_session = _drop_columns_test(target_session)
     logger.info(target_session.head())
     return target_session
@@ -39,6 +40,7 @@ def _drop_columns_train(df):
 def _drop_columns_test(df):
     df.drop([
         'installation_id',
+        'accuracy_group',
         'assignment_False_counts',
         'assignment_True_counts'
     ], axis=1, inplace=True)
