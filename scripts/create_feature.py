@@ -1,4 +1,3 @@
-
 import pandas as pd
 
 from utils import get_logger
@@ -7,6 +6,9 @@ logger = get_logger()
 
 
 def create_feature(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    全ての特徴を生成する。mainからはこれだけ呼べば良くする。
+    """
     type_features = _type_feature(df)
     event_code_features = _event_code_feature(df)
     title_features = _title_feature(df)
@@ -29,30 +31,42 @@ def create_feature(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _type_feature(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    typeに関する特徴（ex. Assessment, Clipなど）
+    """
     logger.info('Create type features')
     count_features = df.groupby(['game_session', 'type'])['event_id'].count().unstack().fillna(0)
     count_features.rename(columns={col: 'type_'+col+'_counts' for col in count_features.columns}, inplace=True)
-    type_features = pd.concat([count_features], axis=1)
+    type_features = pd.concat([count_features], axis=1)  # 後々コメントアウトで必要な特徴を調整できるように
     return type_features
 
 
 def _event_code_feature(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    event_codeに関する特徴
+    """
     logger.info('Create event_code features')
     count_features = df.groupby(['game_session', 'event_code'])['event_id'].count().unstack().fillna(0)
     count_features.rename(columns={col: 'event_code_'+str(col)+'_counts' for col in count_features.columns}, inplace=True)
-    event_code_features = pd.concat([count_features], axis=1)
+    event_code_features = pd.concat([count_features], axis=1)  # 後々コメントアウトで必要な特徴を調整できるように
     return event_code_features
 
 
 def _title_feature(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    titleに関する特徴（ex. Sandcastle Builder (Activity)など）
+    """
     logger.info('Create title features')
     count_features = df.groupby(['game_session', 'title'])['event_id'].count().unstack().fillna(0)
     count_features.rename(columns={col: 'title_'+col+'_counts' for col in count_features.columns}, inplace=True)
-    title_features = pd.concat([count_features], axis=1)
+    title_features = pd.concat([count_features], axis=1)  # 後々コメントアウトで必要な特徴を調整できるように
     return title_features
 
 
 def _datetime_feature(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    timestampに関する特徴
+    """
     logger.info('Create datetime features')
     df['timestamp'] = pd.to_datetime(df['timestamp'])
     df['hour'] = df['timestamp'].dt.hour
@@ -62,19 +76,25 @@ def _datetime_feature(df: pd.DataFrame) -> pd.DataFrame:
     hour_count_features.rename(columns={col: 'hour_'+str(col)+'_counts' for col in hour_count_features.columns}, inplace=True)
     weekday_count_features = df.groupby(['game_session', 'weekday'])['event_id'].count().unstack().fillna(0)
     weekday_count_features.rename(columns={col: 'weekday_'+str(col)+'_counts' for col in weekday_count_features.columns}, inplace=True)
-    datetime_features = pd.concat([hour_count_features, weekday_count_features], axis=1)
+    datetime_features = pd.concat([hour_count_features, weekday_count_features], axis=1)  # 後々コメントアウトで必要な特徴を調整できるように
     return datetime_features
 
 
 def _game_time_feature(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    game_timeに関する特徴
+    """
     logger.info('Create gametime features')
     agg_features = df.groupby(['game_session'])['game_time'].agg(['sum', 'mean'])
     agg_features.rename(columns={col: 'game_time_'+col for col in agg_features.columns}, inplace=True)
-    game_time_features = pd.concat([agg_features], axis=1)
+    game_time_features = pd.concat([agg_features], axis=1)  # 後々コメントアウトで必要な特徴を調整できるように
     return game_time_features
 
 
 def _attempt_features(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Assessmentの試行に関する特徴
+    """
     logger.info('Creaet attempt features')
     all_attempts = df.loc[
         (df.type == "Assessment") & (df.title == 'Bird Measurer (Assessment)') & (df.event_code == 4110) |
@@ -83,5 +103,5 @@ def _attempt_features(df: pd.DataFrame) -> pd.DataFrame:
     all_attempts['pass_assessment'] = all_attempts['event_data'].str.contains('true')
     count_features = all_attempts.groupby(['game_session', 'pass_assessment'])['event_id'].count().unstack().fillna(0)
     count_features.rename(columns={col: 'assignment_'+str(col)+'_counts' for col in count_features.columns}, inplace=True)
-    attempt_features = pd.concat([count_features]).fillna(0)
+    attempt_features = pd.concat([count_features]).fillna(0)  # 後々コメントアウトで必要な特徴を調整できるように
     return attempt_features

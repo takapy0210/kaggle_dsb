@@ -11,6 +11,9 @@ file_path = os.path.dirname(__file__)
 
 
 def main(dev=False) -> str:
+    """
+    データ読み込み -> submissionファイルの出力までのパイプライン実行を担う
+    """
     train, test, train_labels, submission = read_data_all(dev)
     features_train = create_feature(train)
     X_train, y_train = staging_train(train_labels, features_train)

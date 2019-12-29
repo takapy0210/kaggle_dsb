@@ -19,6 +19,10 @@ params = {
 
 
 def training(X_train: pd.DataFrame, y_train: pd.Series) -> lgb.LGBMRegressor:
+    """
+    学習用のデータを使ってモデルを学習
+    TODO: validationを入れる
+    """
     model = lgb.LGBMRegressor(**params)
     model.fit(X_train, y_train)
     return model

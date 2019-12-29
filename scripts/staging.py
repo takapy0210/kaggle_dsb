@@ -6,6 +6,9 @@ logger = get_logger()
 
 
 def staging_train(train_labels: pd.DataFrame, features: pd.DataFrame) -> (pd.DataFrame, pd.Series):
+    """
+    加工したデータからモデルにインプットできる形のデータに変換する
+    """
     train_labels = train_labels.set_index('game_session').merge(features, how='left', left_index=True, right_index=True)
     train_labels = _drop_columns_train(train_labels)
     X_train = train_labels.drop('accuracy_group', axis=1)
@@ -16,6 +19,9 @@ def staging_train(train_labels: pd.DataFrame, features: pd.DataFrame) -> (pd.Dat
 
 
 def staging_test(test: pd.DataFrame, features: pd.DataFrame, submission: pd.DataFrame) -> pd.DataFrame:
+    """
+    加工したデータからモデルにインプットできる形のデータに変換する
+    """
     target_session = test.loc[test.groupby('installation_id')['timestamp'].idxmax(), ['installation_id', 'game_session']]
     target_session = target_session.set_index('game_session').merge(features, how='left', left_index=True, right_index=True)
     target_session = submission.merge(target_session, how='left', on='installation_id')  # submissionファイルの順番と揃える
@@ -25,6 +31,9 @@ def staging_test(test: pd.DataFrame, features: pd.DataFrame, submission: pd.Data
 
 
 def _drop_columns_train(df):
+    """
+    不要なカラムの削除
+    """
     df.drop([
         'installation_id',
         'title',
@@ -38,6 +47,9 @@ def _drop_columns_train(df):
 
 
 def _drop_columns_test(df):
+    """
+    不要なカラムの削除
+    """
     df.drop([
         'installation_id',
         'accuracy_group',

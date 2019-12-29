@@ -1,3 +1,5 @@
+from typing import List
+
 import os
 import pandas as pd
 
@@ -7,43 +9,44 @@ logger = get_logger()
 file_path = os.path.dirname(__file__)
 
 
-def read_data_all(dev=False):
-    train = read_train(dev)
-    test = read_test(dev)
-    # specs = read_specs()
-    train_labels = read_train_labels()
-    submission = read_submission()
+def read_data_all(dev=False) -> List[pd.DataFrame]:
+    """
+    パイプライン実行に必要なデータの読み込み。mainからはこれだけ呼べば良くする。
+    devがTrueだとtrainとtestで行数を制限して読み込みするので高速に動作確認できる
+    """
+    data = [
+        read_train(dev),
+        read_test(dev),
+        # specs = read_specs(),
+        read_train_labels(),
+        read_submission()
+    ]
     logger.info('Reading data finished')
-    return train, test, train_labels, submission
+    return data
 
 
-def read_train(dev=False):
+def read_train(dev=False) -> pd.DataFrame:
     logger.info('Reading train.csv')
     N_ROW = None if not dev else 100000
     return pd.read_csv(os.path.join(file_path, '../data/input/train.csv'), nrows=N_ROW)
 
 
-def read_test(dev=False):
+def read_test(dev=False) -> pd.DataFrame:
     logger.info('Reading test.csv')
     N_ROW = None if not dev else 100000
     return pd.read_csv(os.path.join(file_path, '../data/input/test.csv'), nrows=N_ROW)
 
 
-def read_specs():
+def read_specs() -> pd.DataFrame:
     logger.info('Reading specs.csv')
     return pd.read_csv(os.path.join(file_path, '../data/input/specs.csv'))
 
 
-def read_train_labels():
+def read_train_labels() -> pd.DataFrame:
     logger.info('Reading train_labels.csv')
     return pd.read_csv(os.path.join(file_path, '../data/input/train_labels.csv'))
 
 
-def read_submission():
+def read_submission() -> pd.DataFrame:
     logger.info('Reading sample_submission.csv')
     return pd.read_csv(os.path.join(file_path, '../data/output/sample_submission.csv'))
-
-
-# test
-if __name__ == '__main__':
-    read_data_all()
