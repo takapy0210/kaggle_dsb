@@ -23,3 +23,14 @@ python3 scripts/main.py --dev=True
 ```
 
 参考：[python-fire](https://github.com/google/python-fire)
+
+### kaggleへのサブミット
+
+```
+sh scripts/make_submission.sh
+```
+
+を実行すると、kaggle notebook環境で実行可能なスクリプトが生成されます。（`for_script_submission.py`）
+コピペで動くところまで確認済みです。
+
+※コード構成にめちゃくちゃ依存しているので、コードいじっているうちに動かなくなる可能性はあります汗
