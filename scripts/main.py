@@ -10,11 +10,11 @@ from training import training
 file_path = os.path.dirname(__file__)
 
 
-def main(dev=False) -> str:
+def main(dev=False, use_pkl=False) -> str:
     """
     データ読み込み -> submissionファイルの出力までのパイプライン実行を担う
     """
-    train, test, train_labels, submission = read_data_all(dev)
+    train, test, train_labels, submission = read_data_all(dev, use_pkl)
     features_train = create_feature(train)
     X_train, y_train = staging_train(train_labels, features_train)
     model = training(X_train, y_train)

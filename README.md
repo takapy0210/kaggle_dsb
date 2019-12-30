@@ -24,6 +24,15 @@ python3 scripts/main.py --dev=True
 
 参考：[python-fire](https://github.com/google/python-fire)
 
+
+### pklファイルでの読み込み実行
+
+dev=Falseの時のみ有効です。（read_pickleはnrowsが指定できないため）
+
+```
+python3 scripts/main.py --dev=False --use_pkl=True
+```
+
 ### kaggleへのサブミット
 
 ```
