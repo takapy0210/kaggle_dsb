@@ -49,4 +49,4 @@ def read_train_labels() -> pd.DataFrame:
 
 def read_submission() -> pd.DataFrame:
     logger.info('Reading sample_submission.csv')
-    return pd.read_csv(os.path.join(file_path, '../data/output/sample_submission.csv'))
+    return pd.read_csv(os.path.join(file_path, '../data/input/sample_submission.csv'))
