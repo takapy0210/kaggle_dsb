@@ -98,7 +98,7 @@ def main(mode='prd', create_features=True) -> str:
     # StratifiedKFold or GroupKFoldの場合は、cv_targetに対象カラム名を設定する
     cv = {
         'method': 'KFold',
-        'n_splits': 5,
+        'n_splits': 3,
         'random_state': 42,
         'shuffle': True,
         'cv_target': 'hoge'
@@ -137,8 +137,8 @@ def main(mode='prd', create_features=True) -> str:
         'max_depth': 8,
         'lambda_l1': 1,
         'lambda_l2': 1,
-        'num_round': 20000,
-        'early_stopping_rounds': 1000,
+        'num_round': 100,
+        'early_stopping_rounds': 100,
         'verbose': -1,
         'verbose_eval': 500,
         'random_state': 999
