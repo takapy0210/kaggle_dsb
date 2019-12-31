@@ -1,11 +1,17 @@
 import pandas as pd
+import yaml
 
 from utils import get_logger
 
 logger = get_logger()
 
+CONFIG_FILE = '../config/config.yaml'
+with open(CONFIG_FILE) as file:
+    yml = yaml.load(file)
+FEATURE_DIR_NAME = yml['SETTING']['OUTPUT_DIR_NAME']
 
-def staging_train(train_labels: pd.DataFrame, features: pd.DataFrame) -> (pd.DataFrame, pd.Series):
+
+def staging_train(train_labels: pd.DataFrame, features: pd.DataFrame, save=False) -> (pd.DataFrame, pd.Series):
     """
     加工したデータからモデルにインプットできる形のデータに変換する
     """
@@ -14,11 +20,15 @@ def staging_train(train_labels: pd.DataFrame, features: pd.DataFrame) -> (pd.Dat
     X_train = train_labels.drop('accuracy_group', axis=1)
     X_train.columns = ["".join(c if c.isalnum() else "_" for c in str(x)) for x in X_train.columns]  # カラム名にカンマなどが含まれており、lightgbmでエラーが出るため
     y_train = train_labels['accuracy_group']
+    if save:
+        # pd.concat([X_train, y_train], axis=1).to_pickle(FEATURE_DIR_NAME + 'train.pkl')
+        X_train.to_pickle(FEATURE_DIR_NAME + 'X_train.pkl')
+        y_train.to_pickle(FEATURE_DIR_NAME + 'y_train.pkl')
     logger.info(train_labels.head())
     return X_train, y_train
 
 
-def staging_test(test: pd.DataFrame, features: pd.DataFrame, submission: pd.DataFrame) -> pd.DataFrame:
+def staging_test(test: pd.DataFrame, features: pd.DataFrame, submission: pd.DataFrame, save=False) -> pd.DataFrame:
     """
     加工したデータからモデルにインプットできる形のデータに変換する
     """
@@ -26,6 +36,8 @@ def staging_test(test: pd.DataFrame, features: pd.DataFrame, submission: pd.Data
     target_session = target_session.set_index('game_session').merge(features, how='left', left_index=True, right_index=True)
     target_session = submission.merge(target_session, how='left', on='installation_id')  # submissionファイルの順番と揃える
     target_session = _drop_columns_test(target_session)
+    if save:
+        target_session.to_pickle(FEATURE_DIR_NAME + 'X_test.pkl')
     logger.info(target_session.head())
     return target_session
 
