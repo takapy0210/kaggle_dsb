@@ -1,3 +1,4 @@
+# 削除予定
 import os
 
 import fire

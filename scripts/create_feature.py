@@ -1,6 +1,6 @@
 import pandas as pd
 
-from utils import get_logger
+from util import get_logger
 
 logger = get_logger()
 

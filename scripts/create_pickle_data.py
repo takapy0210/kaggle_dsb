@@ -2,8 +2,7 @@ import os
 import pandas as pd
 import yaml
 import load_data
-import reduce_mem_usage as rm
-from utils import get_logger
+from util import get_logger, reduce_mem_usage
 
 logger = get_logger()
 file_path = os.path.dirname(__file__)
@@ -23,8 +22,8 @@ def create_pickle(train, test, specs, train_labels):
 
 
 if __name__ == '__main__':
-    train = rm.reduce_mem_usage(load_data.read_train())
-    test = rm.reduce_mem_usage(load_data.read_test())
-    specs = rm.reduce_mem_usage(load_data.read_specs())
-    train_labels = rm.reduce_mem_usage(load_data.read_train_labels())
+    train = reduce_mem_usage(load_data.read_train())
+    test = reduce_mem_usage(load_data.read_test())
+    specs = reduce_mem_usage(load_data.read_specs())
+    train_labels = reduce_mem_usage(load_data.read_train_labels())
     create_pickle(train, test, specs, train_labels)
