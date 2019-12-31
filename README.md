@@ -19,10 +19,23 @@ python3 scripts/main.py
 スクリプトの動作確認時などは以下のコマンドで高速で実行確認できます。
 
 ```
-python3 scripts/main.py --dev=True
+python3 scripts/main.py mode='dev'
 ```
 
 参考：[python-fire](https://github.com/google/python-fire)
+
+
+### pklファイルでの読み込み実行
+
+```
+python3 scripts/main.py mode='pkl'
+```
+
+### csvファイル（全データ）での読み込み実行
+
+```
+python3 scripts/main.py mode='prd'
+```
 
 ### kaggleへのサブミット
 
