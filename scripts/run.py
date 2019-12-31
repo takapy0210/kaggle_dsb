@@ -21,11 +21,12 @@ warnings.simplefilter('ignore')
 key_list = ['use_features', 'model_params', 'cv', 'setting']
 
 CONFIG_FILE = '../config/config.yaml'
+file_path = os.path.dirname(__file__)
 
-with open(CONFIG_FILE) as file:
+with open(os.path.join(file_path, CONFIG_FILE)) as file:
     yml = yaml.load(file)
-MODEL_DIR_NAME = yml['SETTING']['MODEL_DIR_NAME']
-FEATURE_DIR_NAME = yml['SETTING']['OUTPUT_DIR_NAME']
+MODEL_DIR_NAME = os.path.join(file_path, yml['SETTING']['MODEL_DIR_NAME'])
+FEATURE_DIR_NAME = os.path.join(file_path, yml['SETTING']['OUTPUT_DIR_NAME'])
 
 
 def confirm(text=None):

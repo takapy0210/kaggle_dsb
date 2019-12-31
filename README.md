@@ -30,17 +30,13 @@ python3 scripts/run.py mode='dev'
 ### pklファイルでの読み込み実行
 
 ```
-python3 scripts/main.py mode='pkl'
-
-python3 scripts/run.py mode='pkl'
+python3 scripts/run.py --mode='pkl'
 ```
 
 ### csvファイル（全データ）での読み込み実行
 
 ```
-python3 scripts/main.py mode='prd'
-
-python3 scripts/run.py mode='prd'
+python3 scripts/run.py --mode='prd'
 ```
 
 ### kaggleへのサブミット

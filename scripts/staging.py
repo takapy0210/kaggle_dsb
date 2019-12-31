@@ -1,14 +1,17 @@
+import os
+
 import pandas as pd
 import yaml
 
-from utils import get_logger
+from util import get_logger
 
 logger = get_logger()
 
 CONFIG_FILE = '../config/config.yaml'
-with open(CONFIG_FILE) as file:
+file_path = os.path.dirname(__file__)
+with open(os.path.join(file_path, CONFIG_FILE)) as file:
     yml = yaml.load(file)
-FEATURE_DIR_NAME = yml['SETTING']['OUTPUT_DIR_NAME']
+FEATURE_DIR_NAME = os.path.join(file_path, yml['SETTING']['OUTPUT_DIR_NAME'])
 
 
 def staging_train(train_labels: pd.DataFrame, features: pd.DataFrame, save=False) -> (pd.DataFrame, pd.Series):
