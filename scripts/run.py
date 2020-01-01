@@ -8,7 +8,7 @@ import warnings
 import fire
 
 from load_data import read_data_all
-from create_feature import create_feature
+from create_feature import create_feature, encode_title, get_train_and_test, preprocess
 from staging import staging_train, staging_test
 from model_lgb import ModelLGB
 from runner import Runner
@@ -89,10 +89,31 @@ def main(mode='prd', create_features=True) -> str:
     if create_features:
         # データ生成
         train, test, train_labels, submission = read_data_all(mode)
-        features_train = create_feature(train)
-        _, _ = staging_train(train_labels, features_train, save=True)
-        features_test = create_feature(test)
-        _ = staging_test(test, features_test, submission, save=True)
+        # features_train = create_feature(train)
+        # features_test = create_feature(test)
+        # _, _ = staging_train(train_labels, features_train, save=True)
+        # _ = staging_test(test, features_test, submission, save=True)
+
+        features_train, features_test, win_code, list_of_user_activities, list_of_event_code, \
+            activities_labels, assess_titles, list_of_event_id, all_title_event_code = encode_title(train, test)
+        features_train, features_test = get_train_and_test(features_train, features_test,
+                                        win_code, list_of_user_activities, list_of_event_code,
+                                        activities_labels, assess_titles, list_of_event_id, all_title_event_code)
+        reduce_train, reduce_test, _ = preprocess(features_train, features_test, assess_titles)
+
+        cols_to_drop = ['game_session', 'installation_id', 'timestamp', 'accuracy_group', 'timestampDate']
+        cols_to_drop = [col for col in cols_to_drop if col in reduce_train.columns]
+        X_train = reduce_train.drop(cols_to_drop, axis=1)
+        y_train = reduce_train['accuracy_group']
+
+        cols_to_drop = ['game_session', 'installation_id', 'timestamp', 'accuracy_group', 'timestampDate']
+        cols_to_drop = [col for col in cols_to_drop if col in reduce_test.columns]
+        X_test = reduce_test.drop(cols_to_drop, axis=1)
+
+        X_train.to_pickle(FEATURE_DIR_NAME + 'X_train.pkl')
+        y_train.to_pickle(FEATURE_DIR_NAME + 'y_train.pkl')
+        X_test.to_pickle(FEATURE_DIR_NAME + 'X_test.pkl')
+
 
     # CVの設定.methodは[KFold, StratifiedKFold ,GroupKFold]から選択可能
     # CVしない場合（全データで学習させる場合）はmethodに'None'を設定
@@ -138,7 +159,7 @@ def main(mode='prd', create_features=True) -> str:
         'max_depth': 8,
         'lambda_l1': 1,
         'lambda_l2': 1,
-        'num_round': 100,
+        'num_round': 1000,
         'early_stopping_rounds': 100,
         'verbose': -1,
         'verbose_eval': 500,

@@ -85,7 +85,8 @@ class Runner:
     def get_feature_name(self):
         """ 学習に使用する特徴量を返却
         """
-        return self.train_x.columns.values.tolist()
+        features_list = self.train_x.columns.values.tolist()
+        return [str(n) for n in features_list]
 
 
     def train_fold(self, i_fold: Union[int, str]) -> Tuple[
