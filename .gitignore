@@ -5,3 +5,6 @@ __pycache__
 
 data/input/
 data/output/
+
+*.model
+*.pkl
