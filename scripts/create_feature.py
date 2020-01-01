@@ -20,7 +20,6 @@ def create_feature(df: pd.DataFrame) -> pd.DataFrame:
     attempt_features = _attempt_features(df)
 
     features = pd.concat([
-        df,
         type_features,
         event_code_features,
         title_features,
