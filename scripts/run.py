@@ -6,6 +6,7 @@ import json
 import collections as cl
 import warnings
 import fire
+import pandas as pd
 
 from load_data import read_data_all
 from create_feature import create_feature, encode_title, get_train_and_test, preprocess
@@ -14,10 +15,11 @@ from model_lgb import ModelLGB
 from runner import Runner
 from util import Submission
 
-warnings.filterwarnings("ignore")
+warnings.filterwarnings('ignore')
+warnings.simplefilter('ignore')
+
 now = datetime.datetime.now()
 suffix = now.strftime("_%m%d_%H%M")
-warnings.simplefilter('ignore')
 key_list = ['use_features', 'model_params', 'cv', 'setting']
 
 CONFIG_FILE = '../config/config.yaml'
@@ -104,11 +106,13 @@ def main(mode='prd', create_features=True) -> str:
         cols_to_drop = ['game_session', 'installation_id', 'timestamp', 'accuracy_group', 'timestampDate']
         cols_to_drop = [col for col in cols_to_drop if col in reduce_train.columns]
         X_train = reduce_train.drop(cols_to_drop, axis=1)
+        X_train.columns = ["".join(c if c.isalnum() else "_" for c in str(x)) for x in X_train.columns]  # カラム名にカンマなどが含まれており、lightgbmでエラーが出るため
         y_train = reduce_train['accuracy_group']
 
         cols_to_drop = ['game_session', 'installation_id', 'timestamp', 'accuracy_group', 'timestampDate']
         cols_to_drop = [col for col in cols_to_drop if col in reduce_test.columns]
         X_test = reduce_test.drop(cols_to_drop, axis=1)
+        X_test.columns = ["".join(c if c.isalnum() else "_" for c in str(x)) for x in X_test.columns]  # カラム名にカンマなどが含まれており、lightgbmでエラーが出るため
 
         X_train.to_pickle(FEATURE_DIR_NAME + 'X_train.pkl')
         y_train.to_pickle(FEATURE_DIR_NAME + 'y_train.pkl')
@@ -159,8 +163,8 @@ def main(mode='prd', create_features=True) -> str:
         'max_depth': 8,
         'lambda_l1': 1,
         'lambda_l2': 1,
-        'num_round': 1000,
-        'early_stopping_rounds': 100,
+        'num_round': 500,
+        'early_stopping_rounds': 500,
         'verbose': -1,
         'verbose_eval': 500,
         'random_state': 999
@@ -181,9 +185,15 @@ def main(mode='prd', create_features=True) -> str:
     else:
         runner.run_train_cv()  # 学習
         ModelLGB.calc_feature_importance(dir_name, run_name, use_feature_name)  # feature_importanceを計算
-        runner.run_predict_cv()  # 推論
+        _pred = runner.run_predict_cv()  # 推論
 
-    Submission.create_submission(run_name, dir_name, setting.get('target'))  # submit作成
+    if _pred is not None:
+        # _predに値が存在する場合（kaggleでのカーネル実行）はsubの作成
+        submission[setting.get('target')] = _pred
+        submission.to_csv('submission.csv', index=False)
+    else:
+        # ローカルでの実行
+        Submission.create_submission(run_name, dir_name, setting.get('target'))  # submit作成
 
     return 'Success!'
 

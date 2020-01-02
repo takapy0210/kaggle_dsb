@@ -27,7 +27,10 @@ class Runner:
                 , params: dict
                 , cv: dict
                 , feature_dir_name: str
-                , model_dir_name: str):
+                , model_dir_name: str
+                , x_train=None
+                , y_train=None
+                , x_test=None):
         """コンストラクタ
         :run_name: runの名前
         :model_cls: モデルのクラス
@@ -51,8 +54,9 @@ class Runner:
         self.feature_dir_name = feature_dir_name
         self.model_dir_name = model_dir_name
         self.remove_train_index = None # trainデータからデータを絞り込む際に使用する。除外するindexを保持。
-        self.train_x = self.load_x_train()
-        self.train_y = self.load_y_train()
+        self.train_x = self.load_x_train() if x_train is None else x_train
+        self.train_y = self.load_y_train() if y_train is None else y_train
+        self.test_x = x_test
         self.out_dir_name = model_dir_name + run_name + '/'
         self.logger = Logger(self.out_dir_name)
         if self.calc_shap:
@@ -145,10 +149,6 @@ class Runner:
         学習・評価とともに、各foldのモデルの保存、スコアのログ出力についても行う
         """
         self.logger.info(f'{self.run_name} - start training cv')
-        if self.cv_method == 'KFold':
-            self.logger.info(f'{self.run_name} - cv method: {self.cv_method}')
-        else:
-            self.logger.info(f'{self.run_name} - cv method: {self.cv_method} - target: {self.cv_target_column}')
 
         scores = [] # 各foldのscoreを保存
         va_idxes = [] # 各foldのvalidationデータのindexを保存
@@ -189,12 +189,12 @@ class Runner:
             self.shap_feature_importance()
 
 
-    def run_predict_cv(self) -> None:
+    def run_predict_cv(self, is_kernel=False) -> None:
         """クロスバリデーションで学習した各foldのモデルの平均により、テストデータの予測を行う
         あらかじめrun_train_cvを実行しておく必要がある
         """
         self.logger.info(f'{self.run_name} - start prediction cv')
-        test_x = self.load_x_test()
+        test_x = self.load_x_test() if self.test_x is None else self.test_x
         preds = []
 
         # 各foldのモデルで予測を行う
@@ -213,10 +213,15 @@ class Runner:
         pred_avg[np.where(np.logical_and(pred_avg > 1.73925866, pred_avg <= 2.22506454))] = 2
         pred_avg[pred_avg > 2.22506454] = 3
 
-        # 推論結果の保存（submit対象データ）
-        Util.dump_df_pickle(pd.DataFrame(pred_avg), self.out_dir_name + f'{self.run_name}-pred.pkl')
+        if is_kernel:
+            return pd.Series(pred_avg)
+        else:
+            # 推論結果の保存（submit対象データ）
+            Util.dump_df_pickle(pd.DataFrame(pred_avg), self.out_dir_name + f'{self.run_name}-pred.pkl')
 
         self.logger.info(f'{self.run_name} - end prediction cv')
+
+        return None
 
 
     def run_train_all(self) -> None:
@@ -237,7 +242,7 @@ class Runner:
         """
         self.logger.info(f'{self.run_name} - start prediction all')
 
-        test_x = self.load_x_test()
+        test_x = self.load_x_test() if self.test_x is None else self.test_x
 
         # 学習データ全てで学習したモデルで予測を行う
         i_fold = 'all'
@@ -305,7 +310,7 @@ class Runner:
         :return: foldに対応するレコードのインデックス
         """
         # 学習データ・バリデーションデータを分けるインデックスを返す
-        train_y = self.load_y_train()
+        train_y = self.train_y
         dummy_x = np.zeros(len(train_y))
         kf = KFold(n_splits=self.n_splits, shuffle=self.shuffle, random_state=self.random_state)
         return list(kf.split(dummy_x))[i_fold]
@@ -330,7 +335,7 @@ class Runner:
         """
         # 学習データ・バリデーションデータを分けるインデックスを返す
         group_data = self.load_stratify_or_group_target()
-        train_y = self.load_y_train()
+        train_y = self.train_y
         dummy_x = np.zeros(len(group_data))
         kf = GroupKFold(n_splits=self.n_splits)
         return list(kf.split(dummy_x, train_y, groups=group_data))[i_fold]
