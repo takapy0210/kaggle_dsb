@@ -17,7 +17,7 @@ def read_data_all(mode='prd') -> List[pd.DataFrame]:
     data = [
         read_train(mode),
         read_test(mode),
-        # specs = read_specs(mode),
+        # read_specs(mode),
         read_train_labels(mode),
         read_submission()
     ]
