@@ -212,6 +212,7 @@ class Runner:
         pred_avg[np.where(np.logical_and(pred_avg > 1.12232214, pred_avg <= 1.73925866))] = 1
         pred_avg[np.where(np.logical_and(pred_avg > 1.73925866, pred_avg <= 2.22506454))] = 2
         pred_avg[pred_avg > 2.22506454] = 3
+        pred_avg = pred_avg.astype(int)
 
         if is_kernel:
             return pd.Series(pred_avg)

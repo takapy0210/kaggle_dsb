@@ -189,7 +189,7 @@ def main(mode='prd', create_features=True) -> str:
 
     if _pred is not None:
         # _predに値が存在する場合（kaggleでのカーネル実行）はsubの作成
-        submission[setting.get('target')] = _pred
+        submission[setting.get('target')] = _pred.astype(int)
         submission.to_csv('submission.csv', index=False)
     else:
         # ローカルでの実行
