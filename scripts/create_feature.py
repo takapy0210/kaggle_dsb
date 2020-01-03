@@ -153,7 +153,7 @@ def encode_title(train: pd.DataFrame, test: pd.DataFrame) -> (pd.DataFrame, pd.D
 def get_data(user_sample, win_code, list_of_user_activities, list_of_event_code,
             activities_labels, assess_titles, list_of_event_id, all_title_event_code, test_set=False):
     '''
-    The user_sample is a DataFrame from train or test where the only one 
+    The user_sample is a DataFrame from train or test where the only one
     installation_id is filtered
     And the test_set parameter is related with the labels processing, that is only requered
     if test_set=False
@@ -169,7 +169,7 @@ def get_data(user_sample, win_code, list_of_user_activities, list_of_event_code,
     all_assessments = []
     accumulated_accuracy_group = 0
     accumulated_accuracy = 0
-    accumulated_correct_attempts = 0 
+    accumulated_correct_attempts = 0
     accumulated_uncorrect_attempts = 0
     accumulated_actions = 0
     counter = 0
@@ -178,7 +178,7 @@ def get_data(user_sample, win_code, list_of_user_activities, list_of_event_code,
     last_accuracy_title = {'acc_' + title: -1 for title in assess_titles}
     event_code_count: Dict[str, int] = {ev: 0 for ev in list_of_event_code}
     event_id_count: Dict[str, int] = {eve: 0 for eve in list_of_event_id}
-    title_count: Dict[str, int] = {eve: 0 for eve in activities_labels.values()} 
+    title_count: Dict[str, int] = {eve: 0 for eve in activities_labels.values()}
     title_event_code_count: Dict[str, int] = {t_eve: 0 for t_eve in all_title_event_code}
 
     # itarates through each session of one instalation_id
@@ -199,7 +199,7 @@ def get_data(user_sample, win_code, list_of_user_activities, list_of_event_code,
             # then, check the numbers of wins and the number of losses
             true_attempts = all_attempts['event_data'].str.contains('true').sum()
             false_attempts = all_attempts['event_data'].str.contains('false').sum()
-            # copy a dict to use as feature template, it's initialized with some itens: 
+            # copy a dict to use as feature template, it's initialized with some itens:
             # {'Clip':0, 'Activity': 0, 'Assessment': 0, 'Game':0}
             features = user_activities_count.copy()
             features.update(last_accuracy_title.copy())
@@ -217,7 +217,7 @@ def get_data(user_sample, win_code, list_of_user_activities, list_of_event_code,
             # this is based on the all time attempts so far, at the moment of this assessment
             features['accumulated_correct_attempts'] = accumulated_correct_attempts
             features['accumulated_uncorrect_attempts'] = accumulated_uncorrect_attempts
-            accumulated_correct_attempts += true_attempts 
+            accumulated_correct_attempts += true_attempts
             accumulated_uncorrect_attempts += false_attempts
             # the time spent in the app so far
             if durations == []:
@@ -312,8 +312,8 @@ def preprocess(reduce_train, reduce_test, assess_titles):
         #df['installation_duration_std'] = df.groupby(['installation_id'])['duration_mean'].transform('std')
         df['installation_title_nunique'] = df.groupby(['installation_id'])['session_title'].transform('nunique')
 
-        df['sum_event_code_count'] = df[[2050, 4100, 4230, 5000, 4235, 2060, 4110, 5010, 2070, 2075, 2080, 2081, 2083, 3110, 4010, 3120, 3121, 4020, 4021, 
-                                        4022, 4025, 4030, 4031, 3010, 4035, 4040, 3020, 3021, 4045, 2000, 4050, 2010, 2020, 4070, 2025, 2030, 4080, 2035, 
+        df['sum_event_code_count'] = df[[2050, 4100, 4230, 5000, 4235, 2060, 4110, 5010, 2070, 2075, 2080, 2081, 2083, 3110, 4010, 3120, 3121, 4020, 4021,
+                                        4022, 4025, 4030, 4031, 3010, 4035, 4040, 3020, 3021, 4045, 2000, 4050, 2010, 2020, 4070, 2025, 2030, 4080, 2035,
                                         2040, 4090, 4220, 4095]].sum(axis = 1)
 
         df['installation_event_code_count_mean'] = df.groupby(['installation_id'])['sum_event_code_count'].transform('mean')
