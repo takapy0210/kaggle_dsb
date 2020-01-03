@@ -104,9 +104,8 @@ class ModelLGB(Model):
         df = df.sort_values('importance_mean', ascending=True)
 
         # 出力
-        fig, ax1 = plt.subplots(figsize=(10, 30))
-        plt.tick_params(labelsize=12)  # 図のラベルのfontサイズ
-        plt.tight_layout()
+        fig, ax1 = plt.subplots(figsize=(10, 90))
+        plt.tick_params(labelsize=8)  # 図のラベルのfontサイズ
 
         # 棒グラフを出力
         ax1.set_title('feature importance split')
@@ -127,6 +126,7 @@ class ModelLGB(Model):
         ax1.grid(True)
         ax2.grid(False)
 
+        plt.tight_layout()
         plt.savefig(dir_name + run_name + '_fi_split.png', dpi=300, bbox_inches="tight")
         plt.close()
 
@@ -152,9 +152,8 @@ class ModelLGB(Model):
         df = df.sort_values('importance_mean', ascending=True)
 
         # 出力
-        fig, ax1 = plt.subplots(figsize=(10, 30))
-        plt.tick_params(labelsize=12)  # 図のラベルのfontサイズ
-        plt.tight_layout()
+        fig, ax1 = plt.subplots(figsize=(10, 90))
+        plt.tick_params(labelsize=8)  # 図のラベルのfontサイズ
 
         # 棒グラフを出力
         ax1.set_title('feature importance gain')
@@ -175,5 +174,6 @@ class ModelLGB(Model):
         ax1.grid(True)
         ax2.grid(False)
 
+        plt.tight_layout()
         plt.savefig(dir_name + run_name + '_fi_gain.png', dpi=300, bbox_inches="tight")
         plt.close()
