@@ -104,8 +104,6 @@ def main(mode='prd', create_features=True, model_type='lgb') -> str:
                                         activities_labels, assess_titles, list_of_event_id, all_title_event_code)
         reduce_train, reduce_test, _ = preprocess(features_train, features_test, assess_titles)
 
-        # reduce_train, reduce_test = create_agg(reduce_train, reduce_test)
-
         cols_to_drop = ['game_session', 'installation_id', 'timestamp', 'accuracy_group', 'timestampDate']
         cols_to_drop = [col for col in cols_to_drop if col in reduce_train.columns]
         X_train = reduce_train.drop(cols_to_drop, axis=1)
