@@ -9,7 +9,7 @@ import fire
 import pandas as pd
 
 from load_data import read_data_all
-from create_feature import create_feature, encode_title, get_train_and_test, preprocess, create_agg
+from create_feature import create_feature, encode_title, get_train_and_test, preprocess
 from staging import staging_train, staging_test
 from model_lgb import ModelLGB
 from model_cb import ModelCB
