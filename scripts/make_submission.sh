@@ -11,10 +11,23 @@ from tqdm import tqdm
 from collections import Counter
 from abc import ABCMeta, abstractmethod
 
+from keras.callbacks import EarlyStopping, ModelCheckpoint
+from keras.layers.advanced_activations import PReLU
+from keras.layers.core import Activation, Dense, Dropout
+from keras.layers.normalization import BatchNormalization
+from keras.models import Sequential, load_model
+from keras.utils import np_utils
+from keras import optimizers
+from sklearn.preprocessing import StandardScaler
+
+from catboost import CatBoost, CatBoostRegressor
+from catboost import Pool
+
+import lightgbm as lgb
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import lightgbm as lgb
 import sys
 import os
 import datetime
@@ -23,6 +36,7 @@ import json
 import collections as cl
 import warnings
 import joblib
+import tensorflow as tf
 
 warnings.filterwarnings('ignore')
 warnings.simplefilter('ignore')
@@ -63,6 +77,7 @@ cat scripts/qwk.py >> $OUTPUT_FILE
 cat scripts/model.py >> $OUTPUT_FILE
 cat scripts/model_lgb.py >> $OUTPUT_FILE
 cat scripts/model_cb.py >> $OUTPUT_FILE
+cat scripts/model_nn.py >> $OUTPUT_FILE
 cat scripts/runner.py >> $OUTPUT_FILE
 cat scripts/run.py >> $OUTPUT_FILE
 
@@ -84,6 +99,7 @@ sed -e '/^import/d' $OUTPUT_FILE |
   sed -e '/if save:/d'|
   sed -e "s/Runner(run_name, ModelLGB, setting, model_params, cv, FEATURE_DIR_NAME, MODEL_DIR_NAME)/Runner(run_name, ModelLGB, setting, model_params, cv, FEATURE_DIR_NAME, MODEL_DIR_NAME, X_train, y_train, X_test)/" |
   sed -e "s/Runner(run_name, ModelCB, setting, model_params, cv, FEATURE_DIR_NAME, MODEL_DIR_NAME)/Runner(run_name, ModelCB, setting, model_params, cv, FEATURE_DIR_NAME, MODEL_DIR_NAME, X_train, y_train, X_test)/" |
+  sed -e "s/Runner(run_name, ModelNN, setting, model_params, cv, FEATURE_DIR_NAME, MODEL_DIR_NAME)/Runner(run_name, ModelNN, setting, model_params, cv, FEATURE_DIR_NAME, MODEL_DIR_NAME, X_train, y_train, X_test)/" |
   sed -e "s/_pred = runner.run_predict_cv()/_pred = runner.run_predict_cv(is_kernel=True)/" |
   sed -e "s/os.path.join(file_path, '..\/data\/input/('..\/input\/data-science-bowl-2019/" |
   sed -e "s/os.path.join(file_path, '..\/data\/output\/submission.csv')/'submission.csv'/" > $OUTPUT_TMP_FILE

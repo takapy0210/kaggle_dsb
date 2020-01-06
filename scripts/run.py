@@ -13,6 +13,7 @@ from create_feature import create_feature, encode_title, get_train_and_test, pre
 from staging import staging_train, staging_test
 from model_lgb import ModelLGB
 from model_cb import ModelCB
+from model_nn import ModelNN
 from runner import Runner
 from util import Submission
 
@@ -255,6 +256,63 @@ def main(mode='prd', create_features=True, model_type='lgb') -> str:
         else:
             # ローカルでの実行
             Submission.create_submission(run_name, dir_name, setting.get('target'))  # submit作成
+
+    if model_type == 'nn':
+        # ######################################################
+        # 学習・推論 NN(MLP) ###################################
+        # run nameの設定
+        run_name = 'nn'
+        run_name = run_name + suffix
+        dir_name = MODEL_DIR_NAME + run_name + '/'
+
+        exist_check(MODEL_DIR_NAME, run_name)
+        my_makedirs(dir_name)  # runディレクトリの作成。ここにlogなどが吐かれる
+
+        # 諸々の設定
+        setting = {
+            'run_name': run_name,  # run名
+            'feature_directory': FEATURE_DIR_NAME,  # 特徴量の読み込み先ディレクトリ
+            'target': 'accuracy_group',  # 目的変数
+            'calc_shap': False,  # shap値を計算するか否か
+            'save_train_pred': False  # trainデータでの推論値を保存するか否か（trainデータでの推論値を特徴量として加えたい場合はTrueに設定する）
+        }
+
+        # モデルのパラメータ
+        model_params = {
+            'layers': 3,
+            'nb_epoch': 500,  # 1000
+            'patience': 20,
+            'dropout': 0.3,
+            'units': 512,
+            'classes': 1
+        }
+
+        runner = Runner(run_name, ModelNN, setting, model_params, cv, FEATURE_DIR_NAME, MODEL_DIR_NAME)
+
+        use_feature_name = runner.get_feature_name()  # 今回の学習で使用する特徴量名を取得
+
+        # モデルのconfigをjsonで保存
+        value_list = [use_feature_name, model_params, cv, setting]
+        save_model_config(key_list, value_list, dir_name, run_name)
+
+        if cv.get('method') == 'None':
+            # TODO: こちらも動くように修正する
+            runner.run_train_all()  # 全データで学習
+            runner.run_predict_all()  # 推論
+        else:
+            runner.run_train_cv()  # 学習
+            _pred = runner.run_predict_cv()  # 推論
+
+        if _pred is not None:
+            # _predに値が存在する場合（kaggleでのカーネル実行）はsubの作成
+            submission[setting.get('target')] = _pred.astype(int)
+            submission.to_csv('submission.csv', index=False)
+        else:
+            # ローカルでの実行
+            Submission.create_submission(run_name, dir_name, setting.get('target'))  # submit作成
+
+
+
 
     return 'Success!'
 
