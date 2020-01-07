@@ -1,4 +1,5 @@
 import numpy as np
+from sklearn.metrics import cohen_kappa_score
 
 
 def qwk(a1, a2):
@@ -43,14 +44,29 @@ def eval_qwk_lgb(y_pred, data):
     return 'cappa', qwk(y_true, y_pred), True
 
 
+def trans_target(y_pred):
+    y_pred[y_pred <= 1.12232214] = 0
+    y_pred[np.where(np.logical_and(y_pred > 1.12232214, y_pred <= 1.73925866))] = 1
+    y_pred[np.where(np.logical_and(y_pred > 1.73925866, y_pred <= 2.22506454))] = 2
+    y_pred[y_pred > 2.22506454] = 3
+    return y_pred
+
+
 def eval_qwk_lgb_regr(y_pred, data):
     """
     Fast cappa eval function for lgb.
     """
     y_true = data.get_label()
-    y_pred[y_pred <= 1.12232214] = 0
-    y_pred[np.where(np.logical_and(y_pred > 1.12232214, y_pred <= 1.73925866))] = 1
-    y_pred[np.where(np.logical_and(y_pred > 1.73925866, y_pred <= 2.22506454))] = 2
-    y_pred[y_pred > 2.22506454] = 3
+    y_pred = trans_target(y_pred)
 
     return 'cappa', qwk(y_true, y_pred), True
+
+
+def metrics_qwk(y_true, y_pred):
+    y_pred = trans_target(y_pred)
+    return qwk(y_true, y_pred)
+
+
+def metrics_cohen_kappa_score(y_true, y_pred):
+    y_pred = trans_target(y_pred)
+    return cohen_kappa_score(y_true, y_pred, weights='quadratic')

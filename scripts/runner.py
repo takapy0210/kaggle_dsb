@@ -12,7 +12,7 @@ from sklearn.metrics import log_loss, mean_squared_error, mean_squared_log_error
 from sklearn.model_selection import KFold, StratifiedKFold, GroupKFold
 from typing import Callable, List, Optional, Tuple, Union
 from util import Logger, Util
-from qwk import qwk
+from qwk import metrics_qwk
 
 # 定数
 shap_sampling = 10000
@@ -61,7 +61,7 @@ class Runner:
         self.logger = Logger(self.out_dir_name)
         if self.calc_shap:
             self.shap_values = np.zeros(self.train_x.shape)
-        self.metrics = qwk
+        self.metrics = metrics_qwk
         self.logger.info(f'{self.run_name} - train_x shape: {self.train_x.shape}')
         self.logger.info(f'{self.run_name} - train_y shape: {self.train_y.shape}')
 
