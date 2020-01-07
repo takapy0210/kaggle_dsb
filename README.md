@@ -9,37 +9,60 @@
 PJのrootディレクトリにいると仮定すると、
 
 ```
-python3 scripts/main.py
+python3 scripts/run.py
 ```
 
 でデータ読み込み〜動作します。
+
+### 引数について
+
+#### --mode
+
+- `prd` : オリジナルのcsvファイルを読み込む（デフォルト）
+
+- `dev` : オリジナルのcsvファイルから100kのみ読み込む（検証モード）
+
+- `pkl` : オリジナルのcsvファイルをpkl変換したデータを読み込む。ローカルで全件動作確認する場合はこちらが推奨
+
+#### --create_features
+
+- True : 特徴量生成処理を実行する（デフォルト）
+
+- False : 特徴量生成処理を実行しない。すでに特徴量生成が終了しており、モデルのパラメータチューニングなどを行う際に使用する
+
+#### --model_type
+
+- `lbg` : LightGBMでの学習を行う
+
+- `cb` : CatBoostでの学習を行う
+
 
 ### テスト実行
 
 スクリプトの動作確認時などは以下のコマンドで高速で実行確認できます。
 
 ```
-python3 scripts/main.py mode='dev'
-
-python3 scripts/run.py mode='dev'
+python3 scripts/run.py --mode='dev'
 ```
 
 参考：[python-fire](https://github.com/google/python-fire)
 
 
-### pklファイルでの読み込み実行
+### pklファイル（全データ）での読み込み実行
+
+- 通常で実行するよりデータの読み込みが高速に行えます
 
 ```
 python3 scripts/run.py --mode='pkl'
 ```
 
-### csvファイル（全データ）での読み込み実行
+### csvファイル（全データ）での読み込み実行（デフォルトの動作）
 
 ```
 python3 scripts/run.py --mode='prd'
 ```
 
-### kaggleへのサブミット
+## kaggleへのサブミット
 
 ```
 sh scripts/make_submission.sh
@@ -49,6 +72,7 @@ sh scripts/make_submission.sh
 コピペで動くところまで確認済みです。
 
 ※コード構成にめちゃくちゃ依存しているので、コードいじっているうちに動かなくなる可能性はあります汗
+
 
 ## run.py関連の説明
 
