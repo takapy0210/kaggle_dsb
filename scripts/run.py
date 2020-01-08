@@ -9,7 +9,7 @@ import fire
 import pandas as pd
 
 from load_data import read_data_all
-from create_feature import create_feature, encode_title, get_train_and_test, preprocess
+from create_feature import create_feature, encode_title, get_train_and_test, preprocess, create_user_profile_test, create_user_profile_train, add_session_order_to_train
 from staging import staging_train, staging_test
 from model_lgb import ModelLGB
 from model_cb import ModelCB
@@ -105,13 +105,21 @@ def main(mode='prd', create_features=True, model_type='lgb') -> str:
                                         activities_labels, assess_titles, list_of_event_id, all_title_event_code)
         reduce_train, reduce_test, _ = preprocess(features_train, features_test, assess_titles)
 
-        cols_to_drop = ['game_session', 'installation_id', 'timestamp', 'accuracy_group', 'timestampDate']
+        # user属性情報の生成とマージ
+        train, train_session_master = add_session_order_to_train(train, train_labels)
+        user_profiles_train = create_user_profile_train(train)
+        user_profiles_test = create_user_profile_test(test)
+        train_session_master = train_session_master.merge(user_profiles_train, how='left', on=['installation_id', 'session_order'])
+        reduce_train = reduce_train.merge(train_session_master, how='left', on=['installation_id', 'game_session'])
+        reduce_test = reduce_test.merge(user_profiles_test, how='left', on='installation_id')
+
+        # 不要なカラムの削除
+        cols_to_drop = ['game_session', 'installation_id', 'timestamp', 'session_order', 'accuracy_group', 'timestampDate']
         cols_to_drop = [col for col in cols_to_drop if col in reduce_train.columns]
         X_train = reduce_train.drop(cols_to_drop, axis=1)
         X_train.columns = ["".join(c if c.isalnum() else "_" for c in str(x)) for x in X_train.columns]  # カラム名にカンマなどが含まれており、lightgbmでエラーが出るため
         y_train = reduce_train['accuracy_group']
 
-        cols_to_drop = ['game_session', 'installation_id', 'timestamp', 'accuracy_group', 'timestampDate']
         cols_to_drop = [col for col in cols_to_drop if col in reduce_test.columns]
         X_test = reduce_test.drop(cols_to_drop, axis=1)
         X_test.columns = ["".join(c if c.isalnum() else "_" for c in str(x)) for x in X_test.columns]  # カラム名にカンマなどが含まれており、lightgbmでエラーが出るため

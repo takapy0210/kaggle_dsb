@@ -1,3 +1,5 @@
+from typing import Dict
+
 import pandas as pd
 import numpy as np
 from tqdm import tqdm_notebook
@@ -211,6 +213,7 @@ def get_data(user_sample, win_code, list_of_user_activities, list_of_event_code,
 
             # get installation_id for aggregated features
             features['installation_id'] = session['installation_id'].iloc[-1]
+            features['game_session'] = i
             # add title as feature, remembering that title represents the name of the game
             features['session_title'] = session['title'].iloc[0]
             # the 4 lines below add the feature of the history of the trials of this player
@@ -261,13 +264,13 @@ def get_data(user_sample, win_code, list_of_user_activities, list_of_event_code,
 
         # this piece counts how many actions was made in each event_code so far
         def update_counters(counter: dict, col: str):
-                num_of_session_count = Counter(session[col])
-                for k in num_of_session_count.keys():
-                    x = k
-                    if col == 'title':
-                        x = activities_labels[k]
-                    counter[x] += num_of_session_count[k]
-                return counter
+            num_of_session_count = Counter(session[col])
+            for k in num_of_session_count.keys():
+                x = k
+                if col == 'title':
+                    x = activities_labels[k]
+                counter[x] += num_of_session_count[k]
+            return counter
 
         event_code_count = update_counters(event_code_count, "event_code")
         event_id_count = update_counters(event_id_count, "event_id")
@@ -323,3 +326,176 @@ def preprocess(reduce_train, reduce_test, assess_titles):
     features = [x for x in features if x not in ['accuracy_group', 'installation_id']] + ['acc_' + title for title in assess_titles]
 
     return reduce_train, reduce_test, features
+
+
+def create_user_profile_train(df: pd.DataFrame) -> pd.DataFrame:
+    # installation_id, session_order毎に、使用のあった日付のマスターを作成
+    df['timestamp'] = pd.to_datetime(df['timestamp']).dt.round('H')
+    df['train_labels_id'] = df['installation_id'] + '_' + df['session_order'].astype(str)
+    user_active_date = df[['train_labels_id', 'timestamp']].drop_duplicates().reset_index(drop=True)
+    user_active_date['hour'] = user_active_date['timestamp'].dt.hour
+    user_active_date['weekday'] = user_active_date['timestamp'].dt.weekday_name
+    user_active_date['date'] = user_active_date['timestamp'].dt.date
+
+    # installation_id, session_order毎に、使用のあったhourの分布を抽出（日付のユニークカウントベース）
+    user_active_hour = (
+        user_active_date.groupby(['train_labels_id', 'hour'])['date']
+            .nunique()  # ユニークな日付数をカウント
+            .reset_index()
+            .pivot(index='train_labels_id', columns='hour', values='date')
+            .fillna(0)
+    )
+    user_active_hour.columns = ['user_active_at_' + str(col) for col in user_active_hour.columns]
+    user_active_hour['installation_id'] = user_active_hour.index.map(lambda x: x.split('_')[0])
+    user_active_hour = user_active_hour.groupby('installation_id').cumsum()  # installation_id毎に累積
+    user_active_hour = user_active_hour + 5  # スムージング
+    user_active_hour = user_active_hour / user_active_hour.sum(axis=0)  # 行ごとに合計が１となるように正規化
+
+    # installation_id, session_orderごとに、使用のあった曜日の分布を抽出（日付のユニークカウントベース）
+    user_active_weekday = (
+        user_active_date.groupby(['train_labels_id', 'weekday'])['date']
+            .nunique()  # ユニークな日付数をカウント
+            .reset_index()
+            .pivot(index='train_labels_id', columns='weekday', values='date')
+            .fillna(0)
+    )
+    user_active_weekday.columns = ['user_active_at_' + str(col) for col in user_active_weekday.columns]
+    user_active_weekday['installation_id'] = user_active_weekday.index.map(lambda x: x.split('_')[0])
+    user_active_weekday = user_active_weekday.groupby('installation_id').cumsum()  # installation_id毎に累積
+    user_active_weekday = user_active_weekday + 5  # スムージング
+    user_active_weekday = user_active_weekday / user_active_weekday.sum(axis=0)  # 行ごとに合計が１となるように正規化
+
+    # installation_id, session_orderごとに、アクティビティタイプの分布を抽出（セッションカウントベース）
+    user_activity_type = pd.pivot_table(
+        df.groupby(['train_labels_id', 'type'])['game_session'].nunique().reset_index(),
+        values=['game_session'],
+        index=['train_labels_id'],
+        columns=['type'],
+        fill_value=0
+    )
+    user_activity_type.columns = ['user_active_with_'+col for col in ['Activity', 'Assessment', 'Clip', 'Game']]
+    user_activity_type['installation_id'] = user_activity_type.index.map(lambda x: x.split('_')[0])
+    user_activity_type = user_activity_type.groupby('installation_id').cumsum()  # installation_id毎に累積
+    user_activity_type = user_activity_type + 5  # スムージング
+    user_activity_type = user_activity_type / user_activity_type.sum(axis=0)  # 行ごとに合計が１となるように正規化
+
+    # installation_id, session_orderごとに、遊んだWorldの分布を抽出（セッションカウントベース）
+    user_activity_world = pd.pivot_table(
+        df.groupby(['train_labels_id', 'world'])['game_session'].nunique().reset_index(),
+        values=['game_session'],
+        index=['train_labels_id'],
+        columns=['world'],
+        fill_value=0
+    )
+    user_activity_world.columns = ['user_active_with_'+col for col in ['CRYSTALCAVES', 'MAGMAPEAK', 'NONE', 'TREETOPCITY']]
+    user_activity_world['installation_id'] = user_activity_world.index.map(lambda x: x.split('_')[0])
+    user_activity_world = user_activity_world.groupby('installation_id').cumsum()  # installation_id毎に累積
+    user_activity_world = user_activity_world + 5  # スムージング
+    user_activity_world = user_activity_world / user_activity_world.sum(axis=0)  # 行ごとに合計が１となるように正規化
+
+    # 連結し、user属性として保持
+    user_profile = (
+        user_active_hour
+            .merge(user_active_weekday, right_index=True, left_index=True)
+            .merge(user_activity_type, right_index=True, left_index=True)
+            .merge(user_activity_world, right_index=True, left_index=True)
+    )
+
+    # train_labelsへの結合用の列を抽出
+    user_profile['installation_id'] = user_profile.index.map(lambda x: x.split('_')[0])
+    user_profile['session_order'] = user_profile.index.map(lambda x: float(x.split('_')[1]))
+    return user_profile
+
+
+def create_user_profile_test(df: pd.DataFrame) -> pd.DataFrame:
+
+    # installation_idごとに、使用のあった日付のマスターを作成
+    df['timestamp'] = pd.to_datetime(df['timestamp']).dt.round('H')
+    user_active_date = df[['installation_id', 'timestamp']].drop_duplicates().reset_index(drop=True)
+    user_active_date['hour'] = user_active_date['timestamp'].dt.hour
+    user_active_date['weekday'] = user_active_date['timestamp'].dt.weekday_name
+    user_active_date['date'] = user_active_date['timestamp'].dt.date
+
+    # installation_idごとに、使用のあったhourの分布を抽出（日付のユニークカウントベース）
+    user_active_hour = (
+        user_active_date.groupby(['installation_id', 'hour'])['date']
+                        .nunique()  # ユニークな日付数をカウント
+                        .reset_index()
+                        .pivot(index='installation_id', columns='hour', values='date')
+                        .fillna(0)
+    )
+    user_active_hour.columns = ['user_active_at_' + str(col) for col in user_active_hour.columns]
+    user_active_hour = user_active_hour + 5  # スムージング
+    user_active_hour = user_active_hour / user_active_hour.sum(axis=0)  # installation_idごとに合計が１となるように正規化
+
+    # installation_idごとに、使用のあった曜日の分布を抽出（日付のユニークカウントベース）
+    user_active_weekday = (
+        user_active_date.groupby(['installation_id', 'weekday'])['date']
+                        .nunique()  # ユニークな日付数をカウント
+                        .reset_index()
+                        .pivot(index='installation_id', columns='weekday', values='date')
+                        .fillna(0)
+    )
+    user_active_weekday.columns = ['user_active_at_' + str(col) for col in user_active_weekday.columns]
+    user_active_weekday = user_active_weekday + 5  # スムージングuser_active_hour = user_active_hour + 5  # スムージング
+    user_active_weekday = user_active_weekday / user_active_weekday.sum(axis=0)  # installation_idごとに合計が１となるように正規化
+
+    # installation_idごとにアクティビティタイプの分布を抽出（セッションカウントベース）
+    user_activity_type = pd.pivot_table(
+        df.groupby(['installation_id', 'type'])['game_session'].nunique().reset_index(),
+        values=['game_session'],
+        index=['installation_id'],
+        columns=['type'],
+        fill_value=0
+    )
+    user_activity_type.columns = ['user_active_with_' + col for col in ['Activity', 'Assessment', 'Clip', 'Game']]
+    user_activity_type = user_activity_type.groupby('installation_id').cumsum()  # installation_id毎に累積
+    user_activity_type = user_activity_type + 5  # スムージング
+    user_activity_type = user_activity_type / user_activity_type.sum(axis=0)  # 行ごとに合計が１となるように正規化
+
+    # installation_id, session_orderごとに、遊んだWorldの分布を抽出（セッションカウントベース）
+    user_activity_world = pd.pivot_table(
+        df.groupby(['installation_id', 'world'])['game_session'].nunique().reset_index(),
+        values=['game_session'],
+        index=['installation_id'],
+        columns=['world'],
+        fill_value=0
+    )
+    user_activity_world.columns = ['user_active_with_'+col for col in ['CRYSTALCAVES', 'MAGMAPEAK', 'NONE', 'TREETOPCITY']]
+    user_activity_world = user_activity_world + 5  # スムージング
+    user_activity_world = user_activity_world / user_activity_world.sum(axis=0)  # 行ごとに合計が１となるように正規化
+
+    # 連結し、user属性として保持
+    user_profile = (
+        user_active_hour
+            .merge(user_active_weekday, right_index=True, left_index=True)
+            .merge(user_activity_type, right_index=True, left_index=True)
+            .merge(user_activity_world, right_index=True, left_index=True)
+    ).reset_index()  # installation_idをカラムとして保持
+    return user_profile
+
+
+def add_session_order_to_train(train, train_labels):
+    """
+    trainのログをどのtrain_labelsにあるアセスメントセッションに影響を与えられるのか明示し、リークを防ぐためにsession_orderを定義する。
+    その後、train_labelsのセッション単位で集計をかけたい。
+    """
+    train['timestamp'] = pd.to_datetime(train['timestamp'])
+    game_session_start_time = train.groupby(['game_session'])['timestamp'].min().reset_index()  # セッション毎の開始時刻を集計
+
+    # train_labelsにあるアセスメントセッションの開始時刻とそれを元にしたorderを付与
+    train_session_master = train_labels.merge(game_session_start_time, how='left', on=['game_session']).sort_values(
+        by=['installation_id', 'timestamp'])
+    train_session_master['session_order'] = 1
+    train_session_master['session_order'] = train_session_master.groupby(['installation_id'])['session_order'].cumsum()
+
+    # trainにそれぞれの行動がどのsession_orderに属するか付与
+    train = train.merge(train_session_master[['game_session', 'session_order']], on=['game_session'], how='left')
+    train['session_order'] = (train
+                              .sort_values(by=['installation_id', 'timestamp'])
+                              .groupby('installation_id')['session_order']
+                              .fillna(method='bfill')  # installation_id毎に、特定のアセスメントの前の行動は同じsession_orderを当てはめる
+                              )
+    train.dropna(subset=['session_order'], inplace=True)
+    train_session_master = train_session_master[['installation_id', 'game_session', 'session_order']]
+    return train, train_session_master
