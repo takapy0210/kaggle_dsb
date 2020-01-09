@@ -32,10 +32,19 @@ python3 scripts/run.py
 
 #### --model_type
 
-- `lbg` : LightGBMでの学習を行う
+- `lbg` : LightGBMでの学習を行う（デフォルト）
 
 - `cb` : CatBoostでの学習を行う
 
+- `nn` : MLPでの学習を行う
+
+- `all` : LightGBM、CatBoost、MLPで学習を行い、最後にブレンドしたsubを作成する
+
+#### --is_kernel
+
+- True : kaggleのカーネル実行
+
+- False : ローカル実行（デフォルト）
 
 ### テスト実行
 
