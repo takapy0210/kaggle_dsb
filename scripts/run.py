@@ -92,7 +92,7 @@ def main(mode='prd', create_features=True, model_type='lgb', is_kernel=False) ->
 
     if create_features:
         # データ生成
-        train, test, train_labels, submission = read_data_all(mode)
+        train, test, specs, train_labels, submission = read_data_all(mode)
         # features_train = create_feature(train)
         # features_test = create_feature(test)
         # _, _ = staging_train(train_labels, features_train, save=True)
@@ -100,9 +100,11 @@ def main(mode='prd', create_features=True, model_type='lgb', is_kernel=False) ->
 
         features_train, features_test, win_code, list_of_user_activities, list_of_event_code, \
             activities_labels, assess_titles, list_of_event_id, all_title_event_code = encode_title(train, test)
+        features_train = features_train.merge(specs, how='left', on='event_id', suffixes=('','_y'))
+        features_test = features_test.merge(specs, how='left', on='event_id', suffixes=('','_y'))
         features_train, features_test = get_train_and_test(features_train, features_test,
                                         win_code, list_of_user_activities, list_of_event_code,
-                                        activities_labels, assess_titles, list_of_event_id, all_title_event_code)
+                                        activities_labels, assess_titles, list_of_event_id, all_title_event_code, is_kernel)
         reduce_train, reduce_test, _ = preprocess(features_train, features_test, assess_titles)
 
         # user属性情報の生成とマージ
@@ -380,7 +382,6 @@ def main(mode='prd', create_features=True, model_type='lgb', is_kernel=False) ->
 
         submission[setting.get('target')] = blend_pred.astype(int)
         submission.to_csv('submission.csv', index=False)
-
 
     return 'Success!'
 
