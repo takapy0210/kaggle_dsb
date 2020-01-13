@@ -97,10 +97,7 @@ sed -e '/^import/d' $OUTPUT_FILE |
   sed -e '/^        exist_check/d'|
   sed -e '/to_pickle/d'|
   sed -e '/if save:/d'|
-  sed -e "s/Runner(run_name, ModelLGB, setting, model_params, cv, FEATURE_DIR_NAME, MODEL_DIR_NAME)/Runner(run_name, ModelLGB, setting, model_params, cv, FEATURE_DIR_NAME, MODEL_DIR_NAME, X_train, y_train, X_test)/" |
-  sed -e "s/Runner(run_name, ModelCB, setting, model_params, cv, FEATURE_DIR_NAME, MODEL_DIR_NAME)/Runner(run_name, ModelCB, setting, model_params, cv, FEATURE_DIR_NAME, MODEL_DIR_NAME, X_train, y_train, X_test)/" |
-  sed -e "s/Runner(run_name, ModelNN, setting, model_params, cv, FEATURE_DIR_NAME, MODEL_DIR_NAME)/Runner(run_name, ModelNN, setting, model_params, cv, FEATURE_DIR_NAME, MODEL_DIR_NAME, X_train, y_train, X_test)/" |
-  sed -e "s/_pred = runner.run_predict_cv()/_pred = runner.run_predict_cv(is_kernel=True)/" |
+  sed -e "s/def main(mode='prd', create_features=True, model_type='lgb', is_kernel=False) -> str:/def main(mode='prd', create_features=True, model_type='lgb', is_kernel=True) -> str:/"|
   sed -e "s/os.path.join(file_path, '..\/data\/input/('..\/input\/data-science-bowl-2019/" |
   sed -e "s/os.path.join(file_path, '..\/data\/output\/submission.csv')/'submission.csv'/" > $OUTPUT_TMP_FILE
 echo "$INITIAL_STATEMENTS" > scripts/initial_statements.txt

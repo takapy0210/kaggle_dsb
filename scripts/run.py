@@ -86,7 +86,7 @@ def set_default(obj):
     raise TypeError
 
 
-def main(mode='prd', create_features=True, model_type='lgb') -> str:
+def main(mode='prd', create_features=True, model_type='lgb', is_kernel=False) -> str:
 
     confirm('mode:{}, create_feature:{} '.format(str(mode), str(create_features)))
 
@@ -139,7 +139,7 @@ def main(mode='prd', create_features=True, model_type='lgb') -> str:
         'cv_target': 'hoge'
     }
 
-    if model_type == 'lgb':
+    if model_type == 'lgb' or model_type == 'all':
         # ######################################################
         # 学習・推論 LightGBM ###################################
 
@@ -180,7 +180,10 @@ def main(mode='prd', create_features=True, model_type='lgb') -> str:
             'random_state': 999
         }
 
-        runner = Runner(run_name, ModelLGB, setting, model_params, cv, FEATURE_DIR_NAME, MODEL_DIR_NAME)
+        if is_kernel:
+            runner = Runner(run_name, ModelLGB, setting, model_params, cv, FEATURE_DIR_NAME, MODEL_DIR_NAME, X_train, y_train, X_test)
+        else:
+            runner = Runner(run_name, ModelLGB, setting, model_params, cv, FEATURE_DIR_NAME, MODEL_DIR_NAME)
 
         use_feature_name = runner.get_feature_name()  # 今回の学習で使用する特徴量名を取得
 
@@ -195,18 +198,25 @@ def main(mode='prd', create_features=True, model_type='lgb') -> str:
         else:
             runner.run_train_cv()  # 学習
             ModelLGB.calc_feature_importance(dir_name, run_name, use_feature_name)  # feature_importanceを計算
-            _pred = runner.run_predict_cv()  # 推論
+            _pred = runner.run_predict_cv(is_kernel)  # 推論
 
-        if _pred is not None:
-            # _predに値が存在する場合（kaggleでのカーネル実行）はsubの作成
-            submission[setting.get('target')] = _pred.astype(int)
-            submission.to_csv('submission.csv', index=False)
+        if is_kernel:
+            # kaggleカーネル実行
+            if model_type == 'lgb':
+                # シングルモデルでのcsv作成
+                submission[setting.get('target')] = _pred.astype(int)
+                submission.to_csv('submission.csv', index=False)
+            else:
+                # ブレンドするためのcsv作成
+                submission_lgb = submission.copy()
+                submission_lgb[setting.get('target')] = _pred.astype(int)
+                submission_lgb.to_csv('submission_lgb.csv', index=False)
         else:
             # ローカルでの実行
             Submission.create_submission(run_name, dir_name, setting.get('target'))  # submit作成
 
 
-    if model_type == 'cb':
+    if model_type == 'cb' or model_type == 'all':
         # ######################################################
         # 学習・推論 Catboost ###################################
         # run nameの設定
@@ -241,7 +251,10 @@ def main(mode='prd', create_features=True, model_type='lgb') -> str:
             'use_best_model': True
         }
 
-        runner = Runner(run_name, ModelCB, setting, model_params, cv, FEATURE_DIR_NAME, MODEL_DIR_NAME)
+        if is_kernel:
+            runner = Runner(run_name, ModelCB, setting, model_params, cv, FEATURE_DIR_NAME, MODEL_DIR_NAME, X_train, y_train, X_test)
+        else:
+            runner = Runner(run_name, ModelCB, setting, model_params, cv, FEATURE_DIR_NAME, MODEL_DIR_NAME)
 
         use_feature_name = runner.get_feature_name()  # 今回の学習で使用する特徴量名を取得
 
@@ -255,17 +268,24 @@ def main(mode='prd', create_features=True, model_type='lgb') -> str:
             runner.run_predict_all()  # 推論
         else:
             runner.run_train_cv()  # 学習
-            _pred = runner.run_predict_cv()  # 推論
+            _pred = runner.run_predict_cv(is_kernel)  # 推論
 
-        if _pred is not None:
-            # _predに値が存在する場合（kaggleでのカーネル実行）はsubの作成
-            submission[setting.get('target')] = _pred.astype(int)
-            submission.to_csv('submission.csv', index=False)
+        if is_kernel:
+            # kaggleカーネル実行
+            if model_type == 'cb':
+                # シングルモデルでのcsv作成
+                submission[setting.get('target')] = _pred.astype(int)
+                submission.to_csv('submission.csv', index=False)
+            else:
+                # ブレンドするためのcsv作成
+                submission_cb = submission.copy()
+                submission_cb[setting.get('target')] = _pred.astype(int)
+                submission_cb.to_csv('submission_cb.csv', index=False)
         else:
             # ローカルでの実行
             Submission.create_submission(run_name, dir_name, setting.get('target'))  # submit作成
 
-    if model_type == 'nn':
+    if model_type == 'nn' or model_type == 'all':
         # ######################################################
         # 学習・推論 NN(MLP) ###################################
         # run nameの設定
@@ -287,15 +307,18 @@ def main(mode='prd', create_features=True, model_type='lgb') -> str:
 
         # モデルのパラメータ
         model_params = {
-            'layers': 3,
-            'nb_epoch': 500,  # 1000
+            'layers': 4,
+            'nb_epoch': 500,
             'patience': 20,
             'dropout': 0.3,
             'units': 512,
             'classes': 1
         }
 
-        runner = Runner(run_name, ModelNN, setting, model_params, cv, FEATURE_DIR_NAME, MODEL_DIR_NAME)
+        if is_kernel:
+            runner = Runner(run_name, ModelNN, setting, model_params, cv, FEATURE_DIR_NAME, MODEL_DIR_NAME, X_train, y_train, X_test)
+        else:
+            runner = Runner(run_name, ModelNN, setting, model_params, cv, FEATURE_DIR_NAME, MODEL_DIR_NAME)
 
         use_feature_name = runner.get_feature_name()  # 今回の学習で使用する特徴量名を取得
 
@@ -309,17 +332,54 @@ def main(mode='prd', create_features=True, model_type='lgb') -> str:
             runner.run_predict_all()  # 推論
         else:
             runner.run_train_cv()  # 学習
-            _pred = runner.run_predict_cv()  # 推論
+            _pred = runner.run_predict_cv(is_kernel)  # 推論
 
-        if _pred is not None:
-            # _predに値が存在する場合（kaggleでのカーネル実行）はsubの作成
-            submission[setting.get('target')] = _pred.astype(int)
-            submission.to_csv('submission.csv', index=False)
+        if is_kernel:
+            # kaggleカーネル実行
+            if model_type == 'nn':
+                # シングルモデルでのcsv作成
+                submission[setting.get('target')] = _pred.astype(int)
+                submission.to_csv('submission.csv', index=False)
+            else:
+                # ブレンドするためのcsv作成
+                submission_nn = submission.copy()
+                submission_nn[setting.get('target')] = _pred.astype(int)
+                submission_nn.to_csv('submission_nn.csv', index=False)
         else:
             # ローカルでの実行
             Submission.create_submission(run_name, dir_name, setting.get('target'))  # submit作成
 
+    # 推論のブレンド
+    if model_type == 'all' and is_kernel:
+        weights = {'lgb': 0.30, 'cb': 0.60, 'nn': 0.10}
+        blend_pred = (submission_lgb[setting.get('target')] * weights['lgb']) \
+                        + (submission_cb[setting.get('target')] * weights['cb']) \
+                        + (submission_nn[setting.get('target')] * weights['nn'])
 
+        dist = Counter(reduce_train[setting.get('target')])
+        for k in dist:
+            dist[k] /= len(reduce_train)
+
+        acum = 0
+        bound = {}
+        for i in range(3):
+            acum += dist[i]
+            bound[i] = np.percentile(blend_pred, acum * 100)
+
+        def classify(x):
+            if x <= bound[0]:
+                return 0
+            elif x <= bound[1]:
+                return 1
+            elif x <= bound[2]:
+                return 2
+            else:
+                return 3
+
+        blend_pred = np.array(list(map(classify, blend_pred)))
+
+        submission[setting.get('target')] = blend_pred.astype(int)
+        submission.to_csv('submission.csv', index=False)
 
 
     return 'Success!'
