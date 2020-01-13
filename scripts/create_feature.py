@@ -183,6 +183,11 @@ def get_data(user_sample, win_code, list_of_user_activities, list_of_event_code,
     title_count: Dict[str, int] = {eve: 0 for eve in activities_labels.values()}
     title_event_code_count: Dict[str, int] = {t_eve: 0 for t_eve in all_title_event_code}
 
+    # Game情報
+    game_true_attempts = 0
+    game_false_attempts = 0
+    game_play_times = 0
+
     # itarates through each session of one instalation_id
     for i, session in user_sample.groupby('game_session', sort=False):
         # i = game_session_id
@@ -251,6 +256,11 @@ def get_data(user_sample, win_code, list_of_user_activities, list_of_event_code,
             # how many actions the player has done so far, it is initialized as 0 and updated some lines below
             features['accumulated_actions'] = accumulated_actions
 
+            # Gameの情報を追加
+            features['game_num_incorrect'] = game_false_attempts
+            features['game_num_correct'] = game_true_attempts
+            features['game_play_again'] = game_play_times
+
             # there are some conditions to allow this features to be inserted in the datasets
             # if it's a test set, all sessions belong to the final dataset
             # it it's a train, needs to be passed throught this clausule: session.query(f'event_code == {win_code[session_title]}')
@@ -261,6 +271,12 @@ def get_data(user_sample, win_code, list_of_user_activities, list_of_event_code,
                 all_assessments.append(features)
 
             counter += 1
+
+        # Gameの情報を抽出
+        if (session_type == 'Game') & (test_set or len(session)>1):
+            game_true_attempts = session['info'].str.contains('Correct').sum()
+            game_false_attempts = session['info'].str.contains('Incorrect').sum()
+            game_play_times = session['info'].str.contains('again').sum()
 
         # this piece counts how many actions was made in each event_code so far
         def update_counters(counter: dict, col: str):
@@ -292,17 +308,27 @@ def get_data(user_sample, win_code, list_of_user_activities, list_of_event_code,
 
 def get_train_and_test(train, test,
                         win_code, list_of_user_activities, list_of_event_code,
-                        activities_labels, assess_titles, list_of_event_id, all_title_event_code):
+                        activities_labels, assess_titles, list_of_event_id, all_title_event_code, is_kernel):
     compiled_train = []
     compiled_test = []
-    for i, (ins_id, user_sample) in tqdm(enumerate(train.groupby('installation_id', sort = False)), total = 17000):
-        # user_sampleに1つのins_idの全てのデータが入っている
-        compiled_train += get_data(user_sample, win_code, list_of_user_activities, list_of_event_code,
-                                activities_labels, assess_titles, list_of_event_id, all_title_event_code)
-    for ins_id, user_sample in tqdm(test.groupby('installation_id', sort = False), total = 1000):
-        test_data = get_data(user_sample, win_code, list_of_user_activities, list_of_event_code,
-                                activities_labels, assess_titles, list_of_event_id, all_title_event_code, test_set = True)
-        compiled_test.append(test_data)
+    if is_kernel:
+        for i, (ins_id, user_sample) in enumerate(train.groupby('installation_id', sort = False)):
+            # user_sampleに1つのins_idの全てのデータが入っている
+            compiled_train += get_data(user_sample, win_code, list_of_user_activities, list_of_event_code,
+                                    activities_labels, assess_titles, list_of_event_id, all_title_event_code)
+        for ins_id, user_sample in test.groupby('installation_id', sort = False):
+            test_data = get_data(user_sample, win_code, list_of_user_activities, list_of_event_code,
+                                    activities_labels, assess_titles, list_of_event_id, all_title_event_code, test_set = True)
+            compiled_test.append(test_data)
+    else:
+        for i, (ins_id, user_sample) in tqdm(enumerate(train.groupby('installation_id', sort = False)), total = 17000):
+            # user_sampleに1つのins_idの全てのデータが入っている
+            compiled_train += get_data(user_sample, win_code, list_of_user_activities, list_of_event_code,
+                                    activities_labels, assess_titles, list_of_event_id, all_title_event_code)
+        for ins_id, user_sample in tqdm(test.groupby('installation_id', sort = False), total = 1000):
+            test_data = get_data(user_sample, win_code, list_of_user_activities, list_of_event_code,
+                                    activities_labels, assess_titles, list_of_event_id, all_title_event_code, test_set = True)
+            compiled_test.append(test_data)
     reduce_train = pd.DataFrame(compiled_train)
     reduce_test = pd.DataFrame(compiled_test)
     return reduce_train, reduce_test
