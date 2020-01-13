@@ -24,6 +24,7 @@ from catboost import CatBoost, CatBoostRegressor
 from catboost import Pool
 
 import lightgbm as lgb
+import xgboost as xgb
 
 import numpy as np
 import pandas as pd
@@ -78,6 +79,7 @@ cat scripts/model.py >> $OUTPUT_FILE
 cat scripts/model_lgb.py >> $OUTPUT_FILE
 cat scripts/model_cb.py >> $OUTPUT_FILE
 cat scripts/model_nn.py >> $OUTPUT_FILE
+cat scripts/model_xgb.py >> $OUTPUT_FILE
 cat scripts/runner.py >> $OUTPUT_FILE
 cat scripts/run.py >> $OUTPUT_FILE
 
