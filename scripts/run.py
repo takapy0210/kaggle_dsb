@@ -14,6 +14,7 @@ from staging import staging_train, staging_test
 from model_lgb import ModelLGB
 from model_cb import ModelCB
 from model_nn import ModelNN
+from model_xgb import ModelXGB
 from runner import Runner
 from util import Submission
 
@@ -351,7 +352,79 @@ def main(mode='prd', create_features=True, model_type='lgb', is_kernel=False) ->
             # ローカルでの実行
             Submission.create_submission(run_name, dir_name, setting.get('target'))  # submit作成
 
+    if model_type == 'xgb' or model_type == 'all':
+        # ######################################################
+        # 学習・推論 NN(MLP) ###################################
+        # run nameの設定
+        run_name = 'xgb'
+        run_name = run_name + suffix
+        dir_name = MODEL_DIR_NAME + run_name + '/'
+
+        exist_check(MODEL_DIR_NAME, run_name)
+        my_makedirs(dir_name)  # runディレクトリの作成。ここにlogなどが吐かれる
+
+        # 諸々の設定
+        setting = {
+            'run_name': run_name,  # run名
+            'feature_directory': FEATURE_DIR_NAME,  # 特徴量の読み込み先ディレクトリ
+            'target': 'accuracy_group',  # 目的変数
+            'calc_shap': False,  # shap値を計算するか否か
+            'save_train_pred': False  # trainデータでの推論値を保存するか否か（trainデータでの推論値を特徴量として加えたい場合はTrueに設定する）
+        }
+
+        # モデルのパラメータ
+        model_params = {
+            # from: https://www.kaggle.com/servietsky/xgb-simple-and-efficient
+            'colsample_bytree': 0.4603,
+            'gamma': 0.0468,
+            'learning_rate': 0.05,
+            'max_depth': 3,
+            'min_child_weight': 1.7817,
+            'n_estimators': 2200,
+            'reg_alpha': 0.4640,
+            'reg_lambda': 0.8571,
+            'subsample': 0.5213,
+            'silent': 1,
+            'random_state': 7,
+            'nthread': -1
+        }
+
+        if is_kernel:
+            runner = Runner(run_name, ModelXGB, setting, model_params, cv, FEATURE_DIR_NAME, MODEL_DIR_NAME, X_train, y_train, X_test)
+        else:
+            runner = Runner(run_name, ModelXGB, setting, model_params, cv, FEATURE_DIR_NAME, MODEL_DIR_NAME)
+
+        use_feature_name = runner.get_feature_name()  # 今回の学習で使用する特徴量名を取得
+
+        # モデルのconfigをjsonで保存
+        value_list = [use_feature_name, model_params, cv, setting]
+        save_model_config(key_list, value_list, dir_name, run_name)
+
+        if cv.get('method') == 'None':
+            # TODO: こちらも動くように修正する
+            runner.run_train_all()  # 全データで学習
+            runner.run_predict_all()  # 推論
+        else:
+            runner.run_train_cv()  # 学習
+            _pred = runner.run_predict_cv(is_kernel)  # 推論
+
+        if is_kernel:
+            # kaggleカーネル実行
+            if model_type == 'xgb':
+                # シングルモデルでのcsv作成
+                submission[setting.get('target')] = _pred.astype(int)
+                submission.to_csv('submission.csv', index=False)
+            else:
+                # ブレンドするためのcsv作成
+                submission_xgb = submission.copy()
+                submission_xgb[setting.get('target')] = _pred.astype(int)
+                submission_xgb.to_csv('submission_xgb.csv', index=False)
+        else:
+            # ローカルでの実行
+            Submission.create_submission(run_name, dir_name, setting.get('target'))  # submit作成
+
     # 推論のブレンド
+    # TODO: xbgの結果も入れる
     if model_type == 'all' and is_kernel:
         weights = {'lgb': 0.30, 'cb': 0.60, 'nn': 0.10}
         blend_pred = (submission_lgb[setting.get('target')] * weights['lgb']) \

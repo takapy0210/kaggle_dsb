@@ -9,6 +9,18 @@ verify_ssl = true
 pandas = "*"
 lightgbm = "*"
 fire = "*"
+keras = "*"
+sklearn = "*"
+numpy = "*"
+pyyaml = "*"
+japanize-matplotlib = "*"
+shap = "*"
+tqdm = "*"
+seaborn = "*"
+catboost = "*"
+tensorflow = "*"
+gensim = "*"
+xgboost = "*"
 
 [requires]
 python_version = "3.7"
