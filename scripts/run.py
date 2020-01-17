@@ -9,14 +9,14 @@ import fire
 import pandas as pd
 
 from load_data import read_data_all
-from create_feature import create_feature, encode_title, get_train_and_test, preprocess, create_user_profile_test, create_user_profile_train, add_session_order_to_train
-from staging import staging_train, staging_test
+from create_feature import encode_title, get_train_and_test, preprocess, create_user_profile_test, create_user_profile_train, add_session_order_to_train
 from model_lgb import ModelLGB
 from model_cb import ModelCB
 from model_nn import ModelNN
 from model_xgb import ModelXGB
 from runner import Runner
 from util import Submission
+import gc
 
 warnings.filterwarnings('ignore')
 warnings.simplefilter('ignore')
@@ -94,30 +94,36 @@ def main(mode='prd', create_features=True, model_type='lgb', is_kernel=False) ->
     if create_features:
         # データ生成
         train, test, specs, train_labels, submission = read_data_all(mode)
-        # features_train = create_feature(train)
-        # features_test = create_feature(test)
-        # _, _ = staging_train(train_labels, features_train, save=True)
-        # _ = staging_test(test, features_test, submission, save=True)
 
         features_train, features_test, win_code, list_of_user_activities, list_of_event_code, \
-            activities_labels, assess_titles, list_of_event_id, all_title_event_code = encode_title(train, test)
+            activities_labels, assess_titles, list_of_event_id, all_title_event_code, all_type_world = encode_title(train, test)
+
+        del train, test
+        gc.collect()
+
         features_train = features_train.merge(specs, how='left', on='event_id', suffixes=('','_y'))
         features_test = features_test.merge(specs, how='left', on='event_id', suffixes=('','_y'))
         features_train, features_test = get_train_and_test(features_train, features_test,
                                         win_code, list_of_user_activities, list_of_event_code,
-                                        activities_labels, assess_titles, list_of_event_id, all_title_event_code, is_kernel)
+                                        activities_labels, assess_titles, list_of_event_id, all_title_event_code, all_type_world, is_kernel)
         reduce_train, reduce_test, _ = preprocess(features_train, features_test, assess_titles)
 
         # user属性情報の生成とマージ
+        """ スコア悪くなるので一旦コメント
         train, train_session_master = add_session_order_to_train(train, train_labels)
         user_profiles_train = create_user_profile_train(train)
         user_profiles_test = create_user_profile_test(test)
         train_session_master = train_session_master.merge(user_profiles_train, how='left', on=['installation_id', 'session_order'])
         reduce_train = reduce_train.merge(train_session_master, how='left', on=['installation_id', 'game_session'])
         reduce_test = reduce_test.merge(user_profiles_test, how='left', on='installation_id')
+        """
+
+        del features_train, features_test, _
+        gc.collect()
 
         # 不要なカラムの削除
-        cols_to_drop = ['game_session', 'installation_id', 'timestamp', 'session_order', 'accuracy_group', 'timestampDate']
+        # cols_to_drop = ['game_session', 'installation_id', 'timestamp', 'session_order', 'accuracy_group', 'timestampDate'] + ['acc_' + title for title in assess_titles] # installation_idでGroupKFoldしない場合はこちらを使用
+        cols_to_drop = ['game_session', 'timestamp', 'session_order', 'accuracy_group', 'timestampDate'] + ['acc_' + title for title in assess_titles]
         cols_to_drop = [col for col in cols_to_drop if col in reduce_train.columns]
         X_train = reduce_train.drop(cols_to_drop, axis=1)
         X_train.columns = ["".join(c if c.isalnum() else "_" for c in str(x)) for x in X_train.columns]  # カラム名にカンマなどが含まれており、lightgbmでエラーが出るため
@@ -135,11 +141,11 @@ def main(mode='prd', create_features=True, model_type='lgb', is_kernel=False) ->
     # CVしない場合（全データで学習させる場合）はmethodに'None'を設定
     # StratifiedKFold or GroupKFoldの場合は、cv_targetに対象カラム名を設定する
     cv = {
-        'method': 'KFold',
+        'method': 'GroupKFold',
         'n_splits': 5,
         'random_state': 42,
         'shuffle': True,
-        'cv_target': 'hoge'
+        'cv_target': 'installation_id'
     }
 
     if model_type == 'lgb' or model_type == 'all':
@@ -173,7 +179,7 @@ def main(mode='prd', create_features=True, model_type='lgb', is_kernel=False) ->
             'subsample_freq': 1,
             'feature_fraction': 0.9,
             'num_leaves': 40,
-            'max_depth': 8,
+            'max_depth': 12,
             'lambda_l1': 1,
             'lambda_l2': 1,
             'num_round': 50000,
