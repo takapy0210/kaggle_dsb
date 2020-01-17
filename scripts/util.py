@@ -47,9 +47,10 @@ class Util:
 
 class Logger:
 
-    def __init__(self, path):
+    def __init__(self, path=''):
         self.general_logger = logging.getLogger(path + 'general')
         self.result_logger = logging.getLogger(path + 'result')
+        self.info_logger = logging.getLogger('main')
         stream_handler = logging.StreamHandler()
         file_general_handler = logging.FileHandler(path + 'general.log')
         file_result_handler = logging.FileHandler(path + 'result.log')
@@ -60,6 +61,9 @@ class Logger:
             self.result_logger.addHandler(stream_handler)
             self.result_logger.addHandler(file_result_handler)
             self.result_logger.setLevel(logging.INFO)
+            self.info_logger.addHandler(stream_handler)
+            self.info_logger.addHandler(file_result_handler)
+            self.info_logger.setLevel(logging.DEBUG)
 
     def info(self, message):
         # 時刻をつけてコンソールとログに出力
@@ -79,6 +83,9 @@ class Logger:
         for i, score in enumerate(scores):
             dic[f'score{i}'] = score
         self.result(self.to_ltsv(dic))
+
+    def info_log(self, message) -> logging.Logger:
+        self.info_logger.info(message)
 
     def now_string(self):
         return str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
@@ -131,11 +138,3 @@ def reduce_mem_usage(df, verbose=True):
     if verbose:
         print('Mem. usage decreased to {:5.2f} Mb ({:.1f}% reduction)'.format(end_mem, 100 * (start_mem - end_mem) / start_mem))
     return df
-
-
-def get_logger() -> logging.Logger:
-    FORMAT = '[%(levelname)s]%(asctime)s:%(name)s:%(message)s'
-    logging.basicConfig(format=FORMAT)
-    logger = getLogger('main')
-    logger.setLevel(logging.DEBUG)
-    return logger
