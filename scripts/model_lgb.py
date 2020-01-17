@@ -86,6 +86,7 @@ class ModelLGB(Model):
         # -----------
         # splitの計算
         # -----------
+        """
         # 各foldの平均を算出
         val_mean = val_split.mean(axis=1)
         val_mean = val_mean.values
@@ -129,6 +130,7 @@ class ModelLGB(Model):
         plt.tight_layout()
         plt.savefig(dir_name + run_name + '_fi_split.png', dpi=300, bbox_inches="tight")
         plt.close()
+        """
 
         # -----------
         # gainの計算
@@ -149,11 +151,13 @@ class ModelLGB(Model):
         # 変動係数を算出
         df['coef_of_var'] = df['importance_std'] / df['importance_mean']
         df['coef_of_var'] = df['coef_of_var'].fillna(0)
-        df = df.sort_values('importance_mean', ascending=True)
+        df = df.sort_values('importance_mean', ascending=False)
+        df.to_csv(dir_name + run_name + '_importance_gain.csv')
+        df = df.sort_values('importance_mean', ascending=True).tail(100)
 
         # 出力
-        fig, ax1 = plt.subplots(figsize=(10, 90))
-        plt.tick_params(labelsize=8)  # 図のラベルのfontサイズ
+        fig, ax1 = plt.subplots(figsize=(10, 30))
+        plt.tick_params(labelsize=10)  # 図のラベルのfontサイズ
 
         # 棒グラフを出力
         ax1.set_title('feature importance gain')
@@ -175,5 +179,5 @@ class ModelLGB(Model):
         ax2.grid(False)
 
         plt.tight_layout()
-        plt.savefig(dir_name + run_name + '_fi_gain.png', dpi=300, bbox_inches="tight")
+        plt.savefig(dir_name + run_name + '_fi_gain.png', dpi=200, bbox_inches="tight")
         plt.close()
