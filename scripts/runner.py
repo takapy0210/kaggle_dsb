@@ -90,6 +90,7 @@ class Runner:
         """ 学習に使用する特徴量を返却
         """
         features_list = self.train_x.columns.values.tolist()
+        features_list.remove(self.cv_target_column)  # GroupKFoldの対象カラムを削除
         return [str(n) for n in features_list]
 
 
@@ -104,6 +105,7 @@ class Runner:
         validation = i_fold != 'all'
         train_x = self.train_x.copy()
         train_y = self.train_y.copy()
+        train_x = train_x.drop(self.cv_target_column, axis=1)  # GroupKFoldの対象カラムを削除
 
         if validation:
 
@@ -113,7 +115,8 @@ class Runner:
             elif self.cv_method == 'StratifiedKFold':
                 tr_idx, va_idx = self.load_index_sk_fold(i_fold)
             elif self.cv_method == 'GroupKFold':
-                tr_idx, va_idx = self.load_index_gk_fold(i_fold)
+                # tr_idx, va_idx = self.load_index_gk_fold(i_fold)  # scikit-learn ver
+                tr_idx, va_idx = self.load_index_gk_fold_shuffle(i_fold)
             else:
                 print('CVメソッドが正しくないため終了します')
                 sys.exit(0)
@@ -195,6 +198,7 @@ class Runner:
         """
         self.logger.info(f'{self.run_name} - start prediction cv')
         test_x = self.load_x_test() if self.test_x is None else self.test_x
+        test_x = test_x.drop(self.cv_target_column, axis=1)  # GroupKFoldの対象カラムを削除
         preds = []
 
         # 各foldのモデルで予測を行う
@@ -301,8 +305,10 @@ class Runner:
         または、StratifiedKFoldで分布の比率を維持したいカラムを取得する
         :return: 分布の比率を維持したいデータの特徴量
         """
-        df = pd.read_pickle(self.feature_dir_name + self.cv_target_column + '_train.pkl')
-        return pd.Series(df[self.cv_target_column])
+        # df = pd.read_pickle(self.feature_dir_name + self.cv_target_column + '_train.pkl')
+        df = self.load_x_train() if self.train_x is None else self.train_x
+        # return pd.Series(df[self.cv_target_column])
+        return df[self.cv_target_column]
 
 
     def load_index_k_fold(self, i_fold: int) -> np.array:
@@ -340,3 +346,31 @@ class Runner:
         dummy_x = np.zeros(len(group_data))
         kf = GroupKFold(n_splits=self.n_splits)
         return list(kf.split(dummy_x, train_y, groups=group_data))[i_fold]
+
+
+    def load_index_gk_fold_shuffle(self, i_fold: int) -> np.array:
+        """クロスバリデーションでのfoldを指定して対応するレコードのインデックスを返す
+        :param i_fold: foldの番号
+        :return: foldに対応するレコードのインデックス
+        """
+        # 学習データ・バリデーションデータを分けるインデックスを返す
+        # scikit-learnのGroupKFoldはshuffleできないので、自作した
+        group_data = self.load_stratify_or_group_target()
+        unique_group_data = group_data.unique()
+        kf = KFold(n_splits=self.n_splits, shuffle=self.shuffle, random_state=self.random_state)
+        group_k_list = []
+
+        for tr_group_idx, va_group_idx in kf.split(unique_group_data):
+            tr_group = unique_group_data[tr_group_idx]
+            va_group = unique_group_data[va_group_idx]
+
+            is_tr = pd.DataFrame(group_data.isin(tr_group))
+            is_va = pd.DataFrame(group_data.isin(va_group))
+
+            tr_idx = list(is_tr[is_tr[self.cv_target_column] == True].index)
+            va_idx = list(is_va[is_va[self.cv_target_column] == True].index)
+
+            temp_list = (tr_idx, va_idx)
+            group_k_list.append(temp_list)
+
+        return group_k_list[i_fold]
