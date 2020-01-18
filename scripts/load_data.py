@@ -3,9 +3,9 @@ from typing import List
 import os
 import pandas as pd
 
-from util import get_logger
+from util import Logger
 
-logger = get_logger()
+logger = Logger()
 file_path = os.path.dirname(__file__)
 
 
@@ -21,12 +21,12 @@ def read_data_all(mode='prd') -> List[pd.DataFrame]:
         read_train_labels(mode),
         read_submission()
     ]
-    logger.info('Reading data finished')
+    logger.info_log('Reading data finished')
     return data
 
 
 def read_train(mode='prd') -> pd.DataFrame:
-    logger.info('Reading train.csv')
+    logger.info_log('Reading train.csv')
     if mode=='pkl':
         return pd.read_pickle(os.path.join(file_path, '../data/input/train.pkl'))
     N_ROW = None if mode=='prd' else 100000
@@ -34,7 +34,7 @@ def read_train(mode='prd') -> pd.DataFrame:
 
 
 def read_test(mode='prd') -> pd.DataFrame:
-    logger.info('Reading test.csv')
+    logger.info_log('Reading test.csv')
     if mode=='pkl':
         return pd.read_pickle(os.path.join(file_path, '../data/input/test.pkl'))
     N_ROW = None if mode=='prd' else 100000
@@ -42,19 +42,19 @@ def read_test(mode='prd') -> pd.DataFrame:
 
 
 def read_specs(mode='prd') -> pd.DataFrame:
-    logger.info('Reading specs.csv')
+    logger.info_log('Reading specs.csv')
     if mode=='pkl':
         return pd.read_pickle(os.path.join(file_path, '../data/input/specs.pkl'))
     return pd.read_csv(os.path.join(file_path, '../data/input/specs.csv'))
 
 
 def read_train_labels(mode='prd') -> pd.DataFrame:
-    logger.info('Reading train_labels.csv')
+    logger.info_log('Reading train_labels.csv')
     if mode=='pkl':
         return pd.read_pickle(os.path.join(file_path, '../data/input/train_labels.pkl'))
     return pd.read_csv(os.path.join(file_path, '../data/input/train_labels.csv'))
 
 
 def read_submission() -> pd.DataFrame:
-    logger.info('Reading sample_submission.csv')
+    logger.info_log('Reading sample_submission.csv')
     return pd.read_csv(os.path.join(file_path, '../data/input/sample_submission.csv'))

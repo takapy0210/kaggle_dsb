@@ -37,6 +37,7 @@ import json
 import collections as cl
 import warnings
 import joblib
+import gc
 import tensorflow as tf
 
 warnings.filterwarnings('ignore')
