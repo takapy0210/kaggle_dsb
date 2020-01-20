@@ -49,6 +49,10 @@ def encode_title(train: pd.DataFrame, test: pd.DataFrame) -> (pd.DataFrame, pd.D
     test['timestamp'] = pd.to_datetime(test['timestamp'])
     train['hour'] = train['timestamp'].dt.hour
     test['hour'] = test['timestamp'].dt.hour
+    train['weekday'] = train['timestamp'].dt.weekday
+    test['weekday'] = test['timestamp'].dt.weekday
+    train['weekday_name'] = train['timestamp'].dt.weekday_name
+    test['weekday_name'] = test['timestamp'].dt.weekday_name
 
     return train, test, win_code, list_of_user_activities, list_of_event_code, activities_labels, assess_titles, list_of_event_id, all_title_event_code, all_type_world
 
@@ -94,6 +98,31 @@ def get_data(user_sample, win_code, list_of_user_activities, list_of_event_code,
                             'Mushroom Sorter (Assessment)_4020_accuracy': 0,
                             'Bird Measurer (Assessment)_4020_accuracy': 0,
                             'Chest Sorter (Assessment)_4020_accuracy': 0}
+    clip_comp_counts = {
+                'Welcome to Lost Lagoon!':0,
+                'Tree Top City - Level 1':0,
+                'Ordering Spheres':0,
+                'Costume Box':0,
+                '12 Monkeys':0,
+                'Tree Top City - Level 2':0,
+                "Pirate's Tale":0,
+                'Treasure Map':0,
+                'Tree Top City - Level 3':0,
+                'Rulers':0,
+                'Magma Peak - Level 1':0,
+                'Slop Problem':0,
+                'Magma Peak - Level 2':0,
+                'Crystal Caves - Level 1':0,
+                'Balancing Act':0,
+                'Lifting Heavy Things':0,
+                'Crystal Caves - Level 2':0,
+                'Honey Cake':0,
+                'Crystal Caves - Level 3':0,
+                'Heavy, Heavier, Heaviest':0
+    }
+
+    user_active_weekday = {'Sunday': 0, 'Monday': 0, 'Tuesday': 0, 'Wednesday': 0, 'Thursday': 0, 'Friday': 0, 'Saturday': 0}
+    user_active_hour = {'hour_'+str(i): 0 for i in range(25)}
 
     # new features: time spent in each activity
     last_session_time_sec = 0
@@ -110,6 +139,7 @@ def get_data(user_sample, win_code, list_of_user_activities, list_of_event_code,
     durations_clip = []
     durations_game = []
     durations_activity = []
+    last_session_at = user_sample['timestamp'].min()  # 前のセッションの終了時刻
 
     last_accuracy_title = {'acc_' + title: -1 for title in assess_titles}
     last_game_time_title = {'lgt_' + title: 0 for title in assess_titles}
@@ -181,6 +211,8 @@ def get_data(user_sample, win_code, list_of_user_activities, list_of_event_code,
     cnt9_game_misses = 0
     cnt_over_game_misses = 0
 
+    user_sample['time_diff'] =  (user_sample['timestamp'].shift(periods=-1) - user_sample['timestamp']).dt.seconds # installation_idについて、次のtimestampとの差分
+
     # itarates through each session of one instalation_id
     for i, session in user_sample.groupby('game_session', sort=False):
         # i = game_session_id
@@ -190,6 +222,17 @@ def get_data(user_sample, win_code, list_of_user_activities, list_of_event_code,
         session_type = session['type'].iloc[0]
         session_title = session['title'].iloc[0]
         session_title_text = activities_labels[session_title]
+
+        for weekday in user_active_weekday.keys():
+            if weekday in session['weekday_name'].unique():
+                    user_active_weekday[weekday] += 1
+
+        for hour in user_active_hour.keys():
+            if int(hour.replace('hour_', '')) in session['hour'].unique():
+                user_active_hour[hour] += 1
+
+        from_last_session = (last_session_at - session['timestamp'].min()).seconds/3600  # 前回セッションからの経過時間を計算
+        last_session_at = session['timestamp'].max()  # 今のセッションの最後の時刻を記録（次のセッションに対しての計算時に使用）
 
         # for each assessment, and only this kind off session, the features below are processed
         # and a register are generated
@@ -217,9 +260,12 @@ def get_data(user_sample, win_code, list_of_user_activities, list_of_event_code,
             features.update(ac_true_attempts_title.copy())
             features.update(ac_false_attempts_title.copy())
             features.update(assess_4020_acc_dict.copy())
+            features.update(clip_comp_counts.copy())
 
             features['installation_session_count'] = session_count
             features['hour'] = session['hour'].iloc[-1]
+            features['weekday'] = session['weekday'].iloc[-1]
+            features['from_last_session'] = from_last_session
             features['accumulated_game_miss'] = accumulated_game_miss
 
             features['mean_game_round'] = mean_game_round
@@ -292,6 +338,10 @@ def get_data(user_sample, win_code, list_of_user_activities, list_of_event_code,
             features['accumulated_uncorrect_attempts'] = accumulated_uncorrect_attempts
             accumulated_correct_attempts += true_attempts
             accumulated_uncorrect_attempts += false_attempts
+
+            # 時間帯、曜日のユニークセッション数をカウント
+            features.update(user_active_weekday.copy())
+            features.update(user_active_hour.copy())
 
             # title毎のattempt
             ac_true_attempts_title['ata_' + session_title_text] += true_attempts
@@ -512,6 +562,9 @@ def get_data(user_sample, win_code, list_of_user_activities, list_of_event_code,
 
             durations_clip.append((clip_lengh[activities_labels[session_title]]))
 
+            if session['time_diff'].iloc[0] >= clip_lengh[session_title_text]:
+                clip_comp_counts[session_title_text] += 1  # Clipを最後まで見切ったかどうか
+
         session_count += 1
 
         # this piece counts how many actions was made in each event_code so far
@@ -579,6 +632,7 @@ def get_train_and_test(train, test,
             compiled_test.append(test_data)
     reduce_train = pd.DataFrame(compiled_train)
     reduce_test = pd.DataFrame(compiled_test)
+    # del reduce_train['weekday_name'], reduce_train['weekday_name']
     return reduce_train, reduce_test
 
 
