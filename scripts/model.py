@@ -6,7 +6,7 @@ from typing import Optional
 
 class Model(metaclass=ABCMeta):
 
-    def __init__(self, run_fold_name: str, params: dict) -> None:
+    def __init__(self, run_fold_name: str, params: dict, categoricals=[]) -> None:
         """コンストラクタ
         :param run_fold_name: ランの名前とfoldの番号を組み合わせた名前
         :param params: ハイパーパラメータ
@@ -14,6 +14,7 @@ class Model(metaclass=ABCMeta):
         self.run_fold_name = run_fold_name
         self.params = params
         self.model = None
+        self.categoricals = categoricals
 
     @abstractmethod
     def train(self, tr_x: pd.DataFrame, tr_y: pd.Series,

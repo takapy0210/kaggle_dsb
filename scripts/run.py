@@ -7,15 +7,17 @@ import collections as cl
 import warnings
 import fire
 import pandas as pd
+import category_encoders as ce
 
 from load_data import read_data_all
 from create_feature import encode_title, get_train_and_test, preprocess, create_user_profile_test, create_user_profile_train, add_session_order_to_train
+from feature_selection import select_ajusted
 from model_lgb import ModelLGB
 from model_cb import ModelCB
 from model_nn import ModelNN
 from model_xgb import ModelXGB
 from runner import Runner
-from util import Submission
+from util import Submission, Util
 import gc
 
 warnings.filterwarnings('ignore')
@@ -133,6 +135,13 @@ def main(mode='prd', create_features=True, model_type='lgb', is_kernel=False) ->
         X_test = reduce_test.drop(cols_to_drop, axis=1)
         X_test.columns = ["".join(c if c.isalnum() else "_" for c in str(x)) for x in X_test.columns]  # カラム名にカンマなどが含まれており、lightgbmでエラーが出るため
 
+        # 特徴量選択
+        """ スコア悪くなるので一旦コメント
+        to_exclude, X_test = select_ajusted(X_train, X_test)
+        X_train = X_train.drop(to_exclude, axis=1)
+        X_test = X_test.drop(to_exclude, axis=1)
+        """
+
         X_train.to_pickle(FEATURE_DIR_NAME + 'X_train.pkl')
         y_train.to_pickle(FEATURE_DIR_NAME + 'y_train.pkl')
         X_test.to_pickle(FEATURE_DIR_NAME + 'X_test.pkl')
@@ -174,16 +183,15 @@ def main(mode='prd', create_features=True, model_type='lgb', is_kernel=False) ->
             'boosting_type': 'gbdt',
             'objective': 'regression',
             'metric': 'rmse',
-            'learning_rate': 0.05,
+            'learning_rate': 0.01,
             'subsample': 0.75,
             'subsample_freq': 1,
             'feature_fraction': 0.9,
-            'num_leaves': 40,
-            'max_depth': 12,
+            'max_depth': 15,
             'lambda_l1': 1,
             'lambda_l2': 1,
             'num_round': 50000,
-            'early_stopping_rounds': 500,
+            'early_stopping_rounds': 300,
             'verbose': -1,
             'verbose_eval': 500,
             'random_state': 999
@@ -334,6 +342,13 @@ def main(mode='prd', create_features=True, model_type='lgb', is_kernel=False) ->
         # モデルのconfigをjsonで保存
         value_list = [use_feature_name, model_params, cv, setting]
         save_model_config(key_list, value_list, dir_name, run_name)
+
+        # one-hot-encoding
+        if len(runner.categoricals) > 0:
+            one_hot_encoder = ce.OneHotEncoder(cols=runner.categoricals, drop_invariant=True)
+            one_hot_encoder.fit(runner.train_x[runner.categoricals])
+            ohe_path = os.path.join('.', 'one-hot-enc.pkl')
+            Util.dump(one_hot_encoder, ohe_path)
 
         if cv.get('method') == 'None':
             # TODO: こちらも動くように修正する

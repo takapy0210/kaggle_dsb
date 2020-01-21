@@ -38,6 +38,8 @@ import collections as cl
 import warnings
 import joblib
 import gc
+import random
+import category_encoders as ce
 import tensorflow as tf
 
 warnings.filterwarnings('ignore')
@@ -73,7 +75,7 @@ touch $OUTPUT_FILE
 # 空のファイルに追記
 cat scripts/load_data.py >> $OUTPUT_FILE
 cat scripts/create_feature.py >> $OUTPUT_FILE
-cat scripts/staging.py >> $OUTPUT_FILE
+# cat scripts/staging.py >> $OUTPUT_FILE
 # cat scripts/training.py >> $OUTPUT_FILE
 cat scripts/qwk.py >> $OUTPUT_FILE
 cat scripts/model.py >> $OUTPUT_FILE
@@ -81,6 +83,7 @@ cat scripts/model_lgb.py >> $OUTPUT_FILE
 cat scripts/model_cb.py >> $OUTPUT_FILE
 cat scripts/model_nn.py >> $OUTPUT_FILE
 cat scripts/model_xgb.py >> $OUTPUT_FILE
+cat scripts/feature_selection.py >> $OUTPUT_FILE
 cat scripts/runner.py >> $OUTPUT_FILE
 cat scripts/run.py >> $OUTPUT_FILE
 
