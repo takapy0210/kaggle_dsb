@@ -33,7 +33,8 @@ class ModelCB(Model):
                             dtrain['X'],
                             dtrain['y'],
                             eval_set=(dvalid['X'], dvalid['y']),
-                            verbose=verbose_eval
+                            verbose=verbose_eval,
+                            cat_features=self.categoricals
                             )
             model_array.append(self.model)
 

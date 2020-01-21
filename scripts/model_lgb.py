@@ -17,10 +17,10 @@ class ModelLGB(Model):
 
         # データのセット
         validation = va_x is not None
-        dtrain = lgb.Dataset(tr_x, tr_y)
+        dtrain = lgb.Dataset(tr_x, tr_y, categorical_feature=self.categoricals)
 
         if validation:
-            dvalid = lgb.Dataset(va_x, va_y)
+            dvalid = lgb.Dataset(va_x, va_y, categorical_feature=self.categoricals)
 
         # ハイパーパラメータの設定
         params = dict(self.params)

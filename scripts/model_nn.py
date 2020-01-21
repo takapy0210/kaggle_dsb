@@ -8,7 +8,7 @@ from keras.layers.normalization import BatchNormalization
 from keras.models import Sequential, load_model
 from keras.utils import np_utils
 from keras import optimizers
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
 from model import Model
 from util import Util
@@ -26,11 +26,17 @@ class ModelNN(Model):
 
         # データのセット・スケーリング
         validation = va_x is not None
-        scaler = StandardScaler()
+
+        self.one_hot_encoder = Util.load('one-hot-enc.pkl')
+        tr_x = self.one_hot_encoder.transform(tr_x[self.categoricals])
+
+        # scaler = StandardScaler()
+        scaler = MinMaxScaler()
         scaler.fit(tr_x)
         tr_x = scaler.transform(tr_x)
 
         if validation:
+            va_x = self.one_hot_encoder.transform(va_x[self.categoricals])
             va_x = scaler.transform(va_x)
 
         # パラメータ
@@ -74,6 +80,7 @@ class ModelNN(Model):
         self.scaler = scaler
 
     def predict(self, te_x):
+        te_x = self.one_hot_encoder.transform(te_x[self.categoricals])
         te_x = self.scaler.transform(te_x)
         pred = self.model.predict(te_x)
         return np.ravel(pred)  # 1次元に変換する
@@ -90,3 +97,4 @@ class ModelNN(Model):
         scaler_path = os.path.join(path, f'{self.run_fold_name}-scaler.pkl')
         self.model = load_model(model_path)
         self.scaler = Util.load(scaler_path)
+        self.one_hot_encoder = Util.load('one-hot-enc.pkl')

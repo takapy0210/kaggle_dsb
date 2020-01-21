@@ -6,6 +6,7 @@ import seaborn as sns
 import sys,os
 import shap
 import yaml
+import random
 from model import Model
 from tqdm import tqdm, tqdm_notebook
 from sklearn.metrics import log_loss, mean_squared_error, mean_squared_log_error, mean_absolute_error
@@ -65,6 +66,7 @@ class Runner:
         self.logger.info(f'{self.run_name} - train_x shape: {self.train_x.shape}')
         self.logger.info(f'{self.run_name} - train_y shape: {self.train_y.shape}')
 
+        self.categoricals = ['session_title']
 
     def shap_feature_importance(self) -> None:
         """計算したshap値を可視化して保存する
@@ -268,7 +270,7 @@ class Runner:
         """
         # ラン名、fold、モデルのクラスからモデルを作成する
         run_fold_name = f'{self.run_name}-fold{i_fold}'
-        return self.model_cls(run_fold_name, self.params)
+        return self.model_cls(run_fold_name, self.params, self.categoricals)
 
 
     def load_x_train(self) -> pd.DataFrame:
