@@ -193,7 +193,7 @@ def main(mode='prd', create_features=True, model_type='lgb', is_kernel=False) ->
             'num_round': 50000,
             'early_stopping_rounds': 300,
             'verbose': -1,
-            'verbose_eval': 500,
+            'verbose_eval': 300,
             'random_state': 999
         }
 
@@ -261,10 +261,10 @@ def main(mode='prd', create_features=True, model_type='lgb', is_kernel=False) ->
             'od_type': "Iter",
             'depth': 10,
             'colsample_bylevel': 0.5,
-            'early_stopping_rounds': 500,
+            'early_stopping_rounds': 300,
             'l2_leaf_reg': 18,
             'random_seed': 42,
-            'verbose_eval': 500,
+            'verbose_eval': 300,
             'use_best_model': True
         }
 
@@ -375,7 +375,7 @@ def main(mode='prd', create_features=True, model_type='lgb', is_kernel=False) ->
 
     if model_type == 'xgb' or model_type == 'all':
         # ######################################################
-        # 学習・推論 NN(MLP) ###################################
+        # 学習・推論 xgboost ###################################
         # run nameの設定
         run_name = 'xgb'
         run_name = run_name + suffix
@@ -395,19 +395,18 @@ def main(mode='prd', create_features=True, model_type='lgb', is_kernel=False) ->
 
         # モデルのパラメータ
         model_params = {
-            # from: https://www.kaggle.com/servietsky/xgb-simple-and-efficient
-            'colsample_bytree': 0.4603,
-            'gamma': 0.0468,
-            'learning_rate': 0.05,
-            'max_depth': 3,
-            'min_child_weight': 1.7817,
-            'n_estimators': 2200,
-            'reg_alpha': 0.4640,
-            'reg_lambda': 0.8571,
-            'subsample': 0.5213,
-            'silent': 1,
-            'random_state': 7,
-            'nthread': -1
+            'objective':'reg:squarederror',
+            'eval_metric': 'rmse',
+            'colsample_bytree': 0.8,
+            'learning_rate': 0.01,
+            'max_depth': 10,
+            'subsample': 1,
+            'min_child_weight':3,
+            'gamma':0.25,
+            'num_round': 50000,
+            'early_stopping_rounds': 300,
+            'verbose': 300,
+            'random_state': 999
         }
 
         if is_kernel:
@@ -427,6 +426,7 @@ def main(mode='prd', create_features=True, model_type='lgb', is_kernel=False) ->
             runner.run_predict_all()  # 推論
         else:
             runner.run_train_cv()  # 学習
+            ModelXGB.calc_feature_importance(dir_name, run_name, use_feature_name)  # feature_importanceを計算
             _pred = runner.run_predict_cv(is_kernel)  # 推論
 
         if is_kernel:
@@ -447,10 +447,11 @@ def main(mode='prd', create_features=True, model_type='lgb', is_kernel=False) ->
     # 推論のブレンド
     # TODO: xbgの結果も入れる
     if model_type == 'all' and is_kernel:
-        weights = {'lgb': 0.30, 'cb': 0.60, 'nn': 0.10}
+        weights = {'lgb': 0.30, 'cb': 0.40, 'nn': 0.00, 'xgb': 0.30}
         blend_pred = (submission_lgb[setting.get('target')] * weights['lgb']) \
                         + (submission_cb[setting.get('target')] * weights['cb']) \
-                        + (submission_nn[setting.get('target')] * weights['nn'])
+                        + (submission_nn[setting.get('target')] * weights['nn']) \
+                        + (submission_xgb[setting.get('target')] * weights['xgb'])
 
         dist = Counter(reduce_train[setting.get('target')])
         for k in dist:
